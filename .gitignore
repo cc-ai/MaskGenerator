@@ -1,0 +1,5 @@
+.vscode/
+.comet.config
+.DS_Store
+config/
+__pycache__
