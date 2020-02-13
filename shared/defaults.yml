@@ -63,6 +63,39 @@ gen:
     output_activ: "sigmoid"
     norm: "none"
 
+# ---------------------
+# ----- Generator -----
+# ---------------------
+  
+dis:
+  soft_shift: 0.2 # label smoothing: real in U(1-soft_shift, 1), fake in U(0, soft_shift) # ! one-sided label smoothing
+  flip_prob: 0.05 # label flipping
+  opt:
+    optimizer: Adam # one in [Adam, ExtraAdam] default: Adam
+    beta1: 0.5
+    lr: 0.0005
+    lr_policy: step # constant or step ; if step, specify step_size and gamma
+    lr_step_size: 30 # for linear decay
+    lr_gamma: 0.5
+  default:
+    #&default-dis # default setting for discriminators (there are 4 of them for rn rf sn sf)
+    input_nc: 3
+    ndf: 64
+    n_layers: 3
+    norm: "batch"
+    init_type: kaiming
+    init_gain: 0.2
+    use_sigmoid: false
+    kw: 4
+    padw: 1
+    nf_mult: 1
+    nf_mult_prev: 1
+
+# ------------------------
+# ----- Train/Test Mode -----
+# ------------------------
+
+is_train: True
 
 # ------------------------
 # ----- Train Params -----

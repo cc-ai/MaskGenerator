@@ -51,3 +51,14 @@ def set_data_paths(opts):
             opts.data.files[mode] = str(Path(opts.data.files.base) / opts.data.files[mode])
 
     return opts
+
+
+def set_mode(opts, mode="train"):
+    if mode == "train":
+        opts.is_train = True
+    elif mode == "test":
+        opts.is_train = False
+    else:
+        print("ERROR: Invalid mode")
+
+    return opts
