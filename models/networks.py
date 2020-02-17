@@ -3,13 +3,44 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 import functools
-
+from torch.optim import lr_scheduler
+from torch.nn import init
 from models.blocks import Conv2dBlock, ConvTranspose2dBlock, ResBlocks
-
+from utils import *
 
 ###############################################################################
 # Helper Functions
 ######################### ######################################################
+def init_weights(net, init_type="normal", gain=0.02):
+    def init_func(m):
+        classname = m.__class__.__name__
+        if hasattr(m, "weight") and (
+            classname.find("Conv") != -1 or classname.find("Linear") != -1
+        ):
+            if init_type == "normal":
+                init.normal_(m.weight.data, 0.0, gain)
+            elif init_type == "xavier":
+                init.xavier_normal_(m.weight.data, gain=gain)
+            elif init_type == "kaiming":
+                init.kaiming_normal_(m.weight.data, a=0, mode="fan_in")
+            elif init_type == "orthogonal":
+                init.orthogonal_(m.weight.data, gain=gain)
+            else:
+                raise NotImplementedError(
+                    "initialization method [%s] is not implemented" % init_type
+                )
+            if hasattr(m, "bias") and m.bias is not None:
+                init.constant_(m.bias.data, 0.0)
+        elif classname.find("BatchNorm2d") != -1:
+            init.normal_(m.weight.data, 1.0, gain)
+            init.constant_(m.bias.data, 0.0)
+
+    print("initialize network with %s" % init_type)
+    net.apply(init_func)
+
+
+def l2normalize(v, eps=1e-12):
+    return v / (v.norm() + eps)
 
 
 def get_norm_layer(norm_type="instance"):
@@ -27,8 +58,89 @@ def get_norm_layer(norm_type="instance"):
     return norm_layer
 
 
-def l2normalize(v, eps=1e-12):
-    return v / (v.norm() + eps)
+class GANLoss(nn.Module):
+    def __init__(self, loss_name="lsgan", target_real_label=1.0, target_fake_label=0.0):
+        super(GANLoss, self).__init__()
+        self.register_buffer("real_label", torch.tensor(target_real_label))
+        self.register_buffer("fake_label", torch.tensor(target_fake_label))
+        if loss_name == "lsgan":
+            self.loss = nn.MSELoss()
+        # elif loss_name = 'wgan':
+        else:
+            self.loss = nn.BCELoss()
+
+    def get_target_tensor(self, input, target_is_real):
+        if target_is_real:
+            target_tensor = self.real_label
+        else:
+            target_tensor = self.fake_label
+        return target_tensor.expand_as(input)
+
+    def __call__(self, input, target_is_real):
+        target_tensor = self.get_target_tensor(input, target_is_real)
+        return self.loss(input, target_tensor)
+
+
+def define_G(opts):
+    activ = opts.gen.encoder.activ
+    dim = opts.gen.encoder.dim
+    input_dim = opts.gen.encoder.input_dim
+    n_downsample = opts.gen.encoder.n_downsample
+    n_res = opts.gen.encoder.n_res
+    enc_norm = opts.gen.encoder.norm
+    pad_type = opts.gen.encoder.pad_type
+    output_dim = opts.gen.decoder.output_dim
+    output_activ = opts.gen.decoder.output_activ
+    dec_norm = opts.gen.decoder.norm
+    res_norm = opts.gen.encoder.res_norm
+
+    init_type = opts.gen.opt.init_type
+    init_gain = opts.gen.opt.init_gain
+
+    net = None
+
+    net = Generator(
+        activ,
+        dim,
+        input_dim,
+        n_downsample,
+        n_res,
+        enc_norm,
+        pad_type,
+        output_dim,
+        output_activ,
+        dec_norm,
+        res_norm,
+    )
+
+    init_weights(net, init_type, init_gain)
+
+    return net
+
+
+def define_D(opts):
+    input_nc = opts.dis.default.input_nc
+    ndf = opts.dis.default.ndf
+    n_layers = opts.dis.default.n_layers
+    norm_layer = get_norm_layer(opts.dis.default.norm)
+    use_sigmoid = opts.dis.default.use_sigmoid
+    kw = opts.dis.default.kw
+    padw = opts.dis.default.padw
+    nf_mult = opts.dis.default.nf_mult
+    nf_mult_prev = opts.dis.default.nf_mult_prev
+
+    init_type = opts.gen.opt.init_type
+    init_gain = opts.gen.opt.init_gain
+
+    net = None
+
+    net = NLayerDiscriminator(
+        input_nc, ndf, n_layers, norm_layer, use_sigmoid, kw, padw, nf_mult, nf_mult_prev
+    )
+
+    init_weights(net, init_type, init_gain)
+
+    return net
 
 
 ##############################################################################
@@ -37,21 +149,21 @@ def l2normalize(v, eps=1e-12):
 
 
 class Generator(nn.Module):
-    def __init__(self, opts):
+    def __init__(
+        self,
+        activ,
+        dim,
+        input_dim,
+        n_downsample,
+        n_res,
+        enc_norm,
+        pad_type,
+        output_dim,
+        output_activ,
+        dec_norm,
+        res_norm,
+    ):
         super(Generator, self).__init__()
-
-        activ = opts.gen.encoder.activ
-        dim = opts.gen.encoder.dim
-        input_dim = opts.gen.encoder.input_dim
-        n_downsample = opts.gen.encoder.n_downsample
-        n_res = opts.gen.encoder.n_res
-        enc_norm = opts.gen.encoder.norm
-        pad_type = opts.gen.encoder.pad_type
-        output_dim = opts.gen.decoder.output_dim
-        output_activ = opts.gen.decoder.output_activ
-        dec_norm = opts.gen.decoder.norm
-        res_norm = opts.gen.encoder.res_norm
-
         # --------------------ENCODER----------------------------
         self.encoder = [Conv2dBlock(input_dim, dim, 7, 1, 3)]
 
@@ -90,17 +202,10 @@ class Generator(nn.Module):
 
 # Defines the PatchGAN discriminator with the specified arguments.
 class NLayerDiscriminator(nn.Module):
-    def __init__(self, opts):
+    def __init__(
+        self, input_nc, ndf, n_layers, norm_layer, use_sigmoid, kw, padw, nf_mult, nf_mult_prev,
+    ):
         super(NLayerDiscriminator, self).__init__()
-        input_nc = opts.dis.default.input_nc
-        ndf = opts.dis.default.ndf
-        n_layers = opts.dis.default.n_layers
-        norm_layer = get_norm_layer(opts.dis.default.norm)
-        use_sigmoid = opts.dis.default.use_sigmoid
-        kw = opts.dis.default.kw
-        padw = opts.dis.default.padw
-        nf_mult = opts.dis.default.nf_mult
-        nf_mult_prev = opts.dis.default.nf_mult_prev
 
         if type(norm_layer) == functools.partial:
             use_bias = norm_layer.func == nn.InstanceNorm2d

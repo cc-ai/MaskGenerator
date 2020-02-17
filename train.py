@@ -1,8 +1,8 @@
 import time
 from pathlib import Path
 import sys
-from source.utils import *
-from data import CreateDataLoader
+from utils import *
+from data.datasets import get_loader
 
 # from data import CreateDataLoader
 # from models import create_model
@@ -11,36 +11,32 @@ from data import CreateDataLoader
 if __name__ == "__main__":
     root = Path(__file__).parent.resolve()
 
-    opts = load_opts(default=root / "shared/defaults.yml")
-    opts = set_mode(opts, "train")
-
-    data_loader = CreateDataLoader(opt)
-
-    """
-    dataset = data_loader.load_data()
-    dataset_size = len(data_loader)
+    opt = load_opts(path=root / "example_files/testing.yml", default=root / "shared/defaults.yml")
+    opt = set_mode("train", opt)
+    loader = get_loader(opt)
+    dataset_size = len(loader)
     print("#training images = %d" % dataset_size)
 
     model = create_model(opt)
-    model.setup(opt)
-    visualizer = Visualizer(opt)
+    model.setup()
+
     total_steps = 0
 
-    for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
+    for epoch in range(opt.train.epochs):
         epoch_start_time = time.time()
         iter_data_time = time.time()
         epoch_iter = 0
 
-        for i, data in enumerate(dataset):
+        for i, data in enumerate(loader):
             iter_start_time = time.time()
-            if total_steps % opt.print_freq == 0:
+            if total_steps % opt.train.print_freq == 0:
                 t_data = iter_start_time - iter_data_time
-            visualizer.reset()
-            total_steps += opt.batch_size
-            epoch_iter += opt.batch_size
-            model.set_input(data)
-            model.optimize_parameters()
+            total_steps += opt.data.loaders.batch_size
+            epoch_iter += opt.data.loaders.batch_size
 
+            model.set_input(Dict(data))
+            model.optimize_parameters()
+            """
             if total_steps % opt.display_freq == 0:
                 save_result = total_steps % opt.update_html_freq == 0
                 visualizer.display_current_results(model.get_current_visuals(), epoch, save_result)
@@ -70,5 +66,5 @@ if __name__ == "__main__":
             % (epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time)
         )
         model.update_learning_rate()
-    """
+        """
 

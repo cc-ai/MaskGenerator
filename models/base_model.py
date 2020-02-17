@@ -17,16 +17,10 @@ class BaseModel:
 
     def initialize(self, opt):
         self.opt = opt
-        self.device = (
-            torch.device("cuda:{}".format(self.gpu_ids[0])) if self.gpu_ids else torch.device("cpu")
-        )
-        self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
-        if opt.resize_or_crop != "scale_width":
-            torch.backends.cudnn.benchmark = True
+        self.device = torch.device("cuda" if (torch.cuda.is_available() and opt.use_gpu) else "cpu")
+        self.isTrain = opt.model.is_train
         self.loss_names = []
         self.model_names = []
-        self.visual_names = []
-        self.image_paths = []
 
     def set_input(self, input):
         pass
@@ -35,15 +29,14 @@ class BaseModel:
         pass
 
     # load and print networks; create schedulers
-    def setup(self, opt, parser=None):
-        if self.isTrain:
-            self.schedulers = [
-                networks.get_scheduler(optimizer, opt) for optimizer in self.optimizers
-            ]
+    def setup(self):
+        # TODO Resume training
+        """
         if not self.isTrain or opt.continue_train:
             load_suffix = "iter_%d" % opt.load_iter if opt.load_iter > 0 else opt.epoch
             self.load_networks(load_suffix)
-        self.print_networks(opt.verbose)
+        """
+        self.print_networks(self.opt.model.verbose)
 
     # make models eval mode during test time
     def eval(self):
@@ -58,39 +51,34 @@ class BaseModel:
         with torch.no_grad():
             self.forward()
 
-    # get image paths
-    def get_image_paths(self):
-        return self.image_paths
-
     def optimize_parameters(self):
         pass
 
     # update learning rate (called once every epoch)
     def update_learning_rate(self):
+        """
         for scheduler in self.schedulers:
             scheduler.step()
         lr = self.optimizers[0].param_groups[0]["lr"]
         print("learning rate = %.7f" % lr)
-
-    # return visualization images. train.py will display these images, and save the images to a html
-    def get_current_visuals(self):
-        visual_ret = OrderedDict()
-        for name in self.visual_names:
-            if isinstance(name, str):
-                visual_ret[name] = getattr(self, name)
-        return visual_ret
+        """
 
     # return traning losses/errors. train.py will print out these errors as debugging information
     def get_current_losses(self):
+        print("get losses")
+        """
         errors_ret = OrderedDict()
         for name in self.loss_names:
             if isinstance(name, str):
                 # float(...) works for both scalar tensor and float number
                 errors_ret[name] = float(getattr(self, "loss_" + name))
         return errors_ret
+        """
 
     # save models to the disk
     def save_networks(self, epoch):
+        print("save models")  # TODO: save checkpoints
+        """
         for name in self.model_names:
             if isinstance(name, str):
                 save_filename = "%s_net_%s.pth" % (epoch, name)
@@ -102,24 +90,12 @@ class BaseModel:
                     net.cuda(self.gpu_ids[0])
                 else:
                     torch.save(net.cpu().state_dict(), save_path)
-
-    def __patch_instance_norm_state_dict(self, state_dict, module, keys, i=0):
-        key = keys[i]
-        if i + 1 == len(keys):  # at the end, pointing to a parameter/buffer
-            if module.__class__.__name__.startswith("InstanceNorm") and (
-                key == "running_mean" or key == "running_var"
-            ):
-                if getattr(module, key) is None:
-                    state_dict.pop(".".join(keys))
-            if module.__class__.__name__.startswith("InstanceNorm") and (
-                key == "num_batches_tracked"
-            ):
-                state_dict.pop(".".join(keys))
-        else:
-            self.__patch_instance_norm_state_dict(state_dict, getattr(module, key), keys, i + 1)
+        """
 
     # load models from the disk
     def load_networks(self, epoch):
+        print("load models")  # TODO: restore checkpoints
+        """
         for name in self.model_names:
             if isinstance(name, str):
                 load_filename = "%s_net_%s.pth" % (epoch, name)
@@ -140,6 +116,7 @@ class BaseModel:
                 ):  # need to copy keys here because we mutate in loop
                     self.__patch_instance_norm_state_dict(state_dict, net, key.split("."))
                 net.load_state_dict(state_dict)
+        """
 
     # print network information
     def print_networks(self, verbose):

@@ -92,19 +92,24 @@ dis:
     nf_mult_prev: 1
 
 # ------------------------
-# ----- Train/Test Mode -----
+# ----- Model options -----
 # ------------------------
 
-is_train: True
+model: 
+  model_name: ""
+  is_train: true
+  use_gpu: true
+  lambdas: {}
+  loss_names: []
+  verbose: True
+
+
 
 # ------------------------
 # ----- Train Params -----
 # ------------------------
 train:
   epochs: 1000
-  representational_training: False
-  representation_steps: 0 # for how many steps would the representation be trained before we train the translation
-  freeze_representation: False # whether or not to backprop into the representation when doing the translation
   lambdas: # scaling factors in the total loss
   log_level: 1 # 0: no log, 1: only aggregated losses, >1 detailed losses
 
@@ -115,5 +120,3 @@ val:
   max_log_images: 1
   every_n_steps: 1000
   store_images: false # write to disk on top of comet logging
-  infer_rec: true
-  infer_idt: true # order: real, translated, rec, idt

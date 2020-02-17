@@ -23,14 +23,13 @@ class Resize:
 
 class RandomCrop:
     def __init__(self, size):
-
         assert isinstance(size, (int, tuple, list))
-        if not isinstance(size, int):
-            self.h, self.w = size
-        else:
-            assert len(size == 2)
+        if isinstance(size, int):
             self.h = self.w = size
-        raise ValueError("")
+        else:
+            assert len(size) == 2
+            self.h, self.w = size
+
         self.h = int(self.h)
         self.w = int(self.w)
 
@@ -38,7 +37,6 @@ class RandomCrop:
         h, w = data["x"].size[-2:]
         top = np.random.randint(0, h - self.h)
         left = np.random.randint(0, w - self.w)
-
         return {task: TF.crop(im, top, left, self.h, self.w) for task, im in data.items()}
 
 
@@ -50,6 +48,7 @@ class RandomVerticalFlip:
     def __call__(self, data):
         if np.random.rand() > self.p:
             return data
+
         return {task: self.flip(im) for task, im in data.items()}
 
 
@@ -63,10 +62,12 @@ class ToTensor:
         for task, im in data.items():
             if task in {"x", "a"}:
                 new_data[task] = self.ImagetoTensor(im)
-            elif task in {"h", "d", "w"}:
+            elif task in {"h", "d", "w", "m"}:
                 new_data[task] = self.MaptoTensor(im)
             elif task == "s":
                 new_data[task] = torch.squeeze(torch.from_numpy(np.array(im))).to(torch.int64)
+            else:
+                print("ERROR: Task not found")
         return new_data
 
 
@@ -75,6 +76,7 @@ class Normalize:
         self.normImage = trsfs.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         # self.normSeg = trsfs.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
         self.normDepth = trsfs.Normalize([1 / 255], [1 / 3])
+        # self.normMask = lambda m: m / 255
 
         self.normalize = {
             "x": self.normImage,
