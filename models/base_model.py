@@ -17,10 +17,15 @@ class BaseModel:
 
     def initialize(self, opt):
         self.opt = opt
-        self.device = torch.device("cuda" if (torch.cuda.is_available() and opt.use_gpu) else "cpu")
+        self.use_gpu = opt.model.use_gpu
+        self.device = torch.device(
+            "cuda" if (torch.cuda.is_available() and opt.model.use_gpu) else "cpu"
+        )
         self.isTrain = opt.model.is_train
         self.loss_names = []
         self.model_names = []
+        self.comet_exp = opt.comet_exp
+        self.save_dir = opt.train.output_dir + "/checkpoints"
 
     def set_input(self, input):
         pass
@@ -28,14 +33,17 @@ class BaseModel:
     def forward(self):
         pass
 
+    def validate(self):
+        pass
+
     # load and print networks; create schedulers
     def setup(self):
         # TODO Resume training
-        """
-        if not self.isTrain or opt.continue_train:
-            load_suffix = "iter_%d" % opt.load_iter if opt.load_iter > 0 else opt.epoch
+
+        if not self.isTrain or self.opt.train.resume_checkpoint:
+            load_suffix = "iter_%d" % self.opt.train.load_iter
             self.load_networks(load_suffix)
-        """
+
         self.print_networks(self.opt.model.verbose)
 
     # make models eval mode during test time
@@ -78,24 +86,20 @@ class BaseModel:
     # save models to the disk
     def save_networks(self, epoch):
         print("save models")  # TODO: save checkpoints
-        """
         for name in self.model_names:
             if isinstance(name, str):
                 save_filename = "%s_net_%s.pth" % (epoch, name)
                 save_path = os.path.join(self.save_dir, save_filename)
                 net = getattr(self, "net" + name)
 
-                if len(self.gpu_ids) > 0 and torch.cuda.is_available():
-                    torch.save(net.module.cpu().state_dict(), save_path)
-                    net.cuda(self.gpu_ids[0])
+                if self.use_gpu and torch.cuda.is_available():
+                    torch.save(net.state_dict(), save_path)
                 else:
                     torch.save(net.cpu().state_dict(), save_path)
-        """
 
     # load models from the disk
     def load_networks(self, epoch):
-        print("load models")  # TODO: restore checkpoints
-        """
+
         for name in self.model_names:
             if isinstance(name, str):
                 load_filename = "%s_net_%s.pth" % (epoch, name)
@@ -116,7 +120,6 @@ class BaseModel:
                 ):  # need to copy keys here because we mutate in loop
                     self.__patch_instance_norm_state_dict(state_dict, net, key.split("."))
                 net.load_state_dict(state_dict)
-        """
 
     # print network information
     def print_networks(self, verbose):
@@ -140,3 +143,18 @@ class BaseModel:
             if net is not None:
                 for param in net.parameters():
                     param.requires_grad = requires_grad
+
+    def __patch_instance_norm_state_dict(self, state_dict, module, keys, i=0):
+        key = keys[i]
+        if i + 1 == len(keys):  # at the end, pointing to a parameter/buffer
+            if module.__class__.__name__.startswith("InstanceNorm") and (
+                key == "running_mean" or key == "running_var"
+            ):
+                if getattr(module, key) is None:
+                    state_dict.pop(".".join(keys))
+            if module.__class__.__name__.startswith("InstanceNorm") and (
+                key == "num_batches_tracked"
+            ):
+                state_dict.pop(".".join(keys))
+        else:
+            self.__patch_instance_norm_state_dict(state_dict, getattr(module, key), keys, i + 1)

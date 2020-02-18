@@ -165,21 +165,27 @@ class Generator(nn.Module):
     ):
         super(Generator, self).__init__()
         # --------------------ENCODER----------------------------
-        self.encoder = [Conv2dBlock(input_dim, dim, 7, 1, 3)]
+        self.encoder = [
+            Conv2dBlock(input_dim, dim, 7, 1, 3),
+        ]
 
         for i in range(n_downsample):
-            self.encoder += [Conv2dBlock(dim, 2 * dim, 4, 2, 1, norm=enc_norm)]
+            self.encoder += [
+                Conv2dBlock(dim, 2 * dim, 4, 2, 1, norm=enc_norm, activation=activ),
+            ]
             dim = 2 * dim
 
-        self.res_blocks = ResBlocks(n_res, dim, norm="instance")
+        self.res_blocks = ResBlocks(n_res, dim, norm=res_norm)
         self.encoder = nn.Sequential(*self.encoder)
 
         # --------------------DECODER----------------------------
         self.decoder = []
         for i in range(n_downsample):
-            self.decoder += [ConvTranspose2dBlock(dim, int(dim / 2), 2, 2, 0, norm=dec_norm)]
+            self.decoder += [
+                ConvTranspose2dBlock(dim, int(dim / 2), 2, 2, 0, norm=dec_norm, activation=activ)
+            ]
             dim = int(dim / 2)
-        self.decoder += [Conv2dBlock(dim, output_dim, 3, 1, 1)]
+        self.decoder += [Conv2dBlock(dim, output_dim, 3, 1, 1, activation=output_activ)]
 
         self.decoder = nn.Sequential(*self.decoder)
 

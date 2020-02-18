@@ -118,6 +118,9 @@ def get_transforms(opts):
 
     conf_transforms = []
     for t in opts.data.transforms:
+        if t.ignore:
+            continue
+
         conf_transforms.append(get_transform(t))
 
     return conf_transforms + last_transforms

@@ -2,6 +2,8 @@ import torch
 import itertools
 from .base_model import BaseModel
 from . import networks
+from utils import write_images
+from addict import Dict
 
 
 class MaskGenerator(BaseModel):
@@ -22,6 +24,7 @@ class MaskGenerator(BaseModel):
         # specify the models you want to save to the disk. The program will call base_model.save_networks and base_model.load_networks
         if self.isTrain:
             self.model_names = ["G", "D"]
+
             # self.model_names = ["G_A", "G_B", "D_A", "D_B"]
         else:  # during test time, only load Gs
             self.model_names = ["G"]
@@ -30,8 +33,10 @@ class MaskGenerator(BaseModel):
         # load/define networks
         # The naming conversion is different from those used in the paper
         # Code (paper): G_A (G), G_B (F), D_A (D_Y), D_B (D_X)
-        self.netG = networks.define_G(opt)
-        self.netD = networks.define_D(opt)
+        self.netG = networks.define_G(opt).to(self.device)
+        self.netD = networks.define_D(opt).to(self.device)
+        self.comet_exp = opt.comet.exp
+        self.store_image = opt.val.store_image
 
         if self.isTrain:
             # define loss functions
@@ -54,8 +59,9 @@ class MaskGenerator(BaseModel):
 
     def set_input(self, input):
 
-        self.image = input.data.x
-        self.mask = input.data.m
+        self.image = input.data.x.to(self.device)
+        mask = input.data.m.to(self.device)
+        self.mask = mask[:, 0, :, :].unsqueeze(1)
         self.paths = input.paths
 
     def forward(self):
@@ -63,21 +69,34 @@ class MaskGenerator(BaseModel):
 
     def backward_D(self):
         # Real
-        pred_real = self.netD(self.mask)
+
+        real_mask_d = torch.cat([self.image, self.mask], dim=1)
+        fake_mask_d = torch.cat([self.image, self.fake_mask], dim=1)
+
+        pred_real = self.netD(real_mask_d)
         self.loss_D_real = self.criterionGAN(pred_real, True)
 
         # Fake
-        pred_fake = self.netD(self.fake_mask.detach())
+        pred_fake = self.netD(fake_mask_d.detach())
         self.loss_D_fake = self.criterionGAN(pred_fake, False)
 
         # Combined loss
         self.loss_D = (self.loss_D_real + self.loss_D_fake) * 0.5
 
+        # Log D loss to comet:
+        if self.comet_exp is not None:
+            self.comet_exp.log_metric("loss D", self.loss_D.cpu().detach())
+
         # backward
         self.loss_D.backward()
 
     def backward_G(self):
-        self.loss_G = self.criterionGAN(self.netD(self.fake_mask), True)
+        self.loss_G = self.criterionGAN(
+            self.netD(torch.cat([self.image, self.fake_mask], dim=1)), True
+        )
+        # Log G loss to comet:
+        if self.comet_exp is not None:
+            self.comet_exp.log_metric("loss G", self.loss_G.cpu().detach())
         self.loss_G.backward()
 
     def optimize_parameters(self):
@@ -85,7 +104,6 @@ class MaskGenerator(BaseModel):
         self.forward()
 
         # G
-
         self.set_requires_grad(self.netD, False)
         self.optimizer_G.zero_grad()
         self.backward_G()
@@ -97,3 +115,12 @@ class MaskGenerator(BaseModel):
         self.backward_D()
         self.optimizer_D.step()
 
+    def save_test_images(self, test_display_data, curr_iter):
+        save_images = []
+        for i in range(len(test_display_data)):
+            self.set_input(test_display_data[i])
+            self.test()
+            save_images.append(self.image[0])
+            save_images.append(self.mask[0].repeat(3, 1, 1))
+            save_images.append(self.fake_mask[0].repeat(3, 1, 1))  # This means save 3 per row
+        write_images(save_images, curr_iter, comet_exp=self.comet_exp, store_im=self.store_image)

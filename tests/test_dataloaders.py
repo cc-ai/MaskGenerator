@@ -12,7 +12,7 @@ from data.datasets import get_loader
 from tests.run import opts
 
 if __name__ == "__main__":
-    loader = get_loader("train", opts)
+    loader = get_loader(opts)
     for data_dict in loader:
         print(data_dict.keys())
 

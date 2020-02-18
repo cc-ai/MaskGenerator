@@ -88,7 +88,7 @@ class SimDataset(Dataset):
 
 def get_loader(opts):
     return DataLoader(
-        SimDataset(opts, transform=transforms.Compose(get_transforms(opts))),
+        SimDataset(opts, transform=transforms.Compose(get_transforms(Dict(opts)))),
         batch_size=opts.data.loaders.get("batch_size", 4),
         shuffle=True,
         num_workers=opts.data.loaders.get("num_workers", 8),
