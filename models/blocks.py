@@ -51,6 +51,9 @@ class Conv2dBlock(nn.Module):
             self.activation = nn.SELU(inplace=True)
         elif activation == "tanh":
             self.activation = nn.Tanh()
+        elif activation == "sigmoid":
+            self.activation = nn.Sigmoid()
+
         elif activation == "none":
             self.activation = None
         else:
@@ -97,7 +100,6 @@ class ConvTranspose2dBlock(nn.Module):
         if norm == "batch":
             self.norm = nn.BatchNorm2d(norm_dim)
         elif norm == "instance":
-            # self.norm = nn.InstanceNorm2d(norm_dim, track_running_stats=True)
             self.norm = nn.InstanceNorm2d(norm_dim)
         elif norm == "none":
             self.norm = None
