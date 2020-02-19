@@ -4,7 +4,7 @@
 # ----------------
 data:
   files: # if one is not none it will override the dirs location
-    base: "/network/tmp1/ccai/data/mask_generation"
+    base: "/network/tmp1/ccai/data/mask_generation/11k"
     train: train.json
     val: test.json
 
@@ -124,9 +124,9 @@ train:
   print_freq: 1
   output_dir: './outputs'
   save_im_freq: 100
-  save_freq: 1000
+  save_freq: 20000
   resume_checkpoint: false
-  load_iter: 4000
+  load_iter: 500000
 
 
 # -----------------------------
@@ -136,3 +136,4 @@ val:
   max_log_images: 1
   store_images: false # write to disk on top of comet logging
   save_im_freq: 1000
+  overlay: true
