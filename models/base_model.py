@@ -44,6 +44,7 @@ class BaseModel:
             load_suffix = "iter_%d" % self.opt.train.load_iter
             self.load_networks(load_suffix)
         if not self.isTrain:
+            print("brohhhhhhhh")
             self.eval()
 
         self.print_networks(self.opt.model.verbose)

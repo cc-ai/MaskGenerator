@@ -12,14 +12,19 @@ import copy
 
 if __name__ == "__main__":
     root = Path(__file__).parent.resolve()
-    opt_file = "example_files/testing.yml"
+    opt_file = "shared/sim.yml"
 
     opt = load_opts(path=root / opt_file, default=root / "shared/defaults.yml")
-    opt = set_mode("train", opt)
-    loader = get_loader(opt)
 
+    #! important to do test first
     val_opt = set_mode("test", opt)
     val_loader = get_loader(val_opt)
+    test_display_images = [Dict(iter(val_loader).next()) for i in range(opt.comet.display_size)]
+
+    opt = set_mode("train", opt)
+    loader = get_loader(opt)
+    train_display_images = [Dict(iter(loader).next()) for i in range(opt.comet.display_size)]
+
     dataset_size = len(loader)
     print("#training images = %d" % dataset_size)
 
@@ -34,10 +39,6 @@ if __name__ == "__main__":
 
     model = create_model(opt)
     model.setup()
-
-    # Get test and train display images:
-    train_display_images = [Dict(iter(loader).next()) for i in range(opt.comet.display_size)]
-    test_display_images = [Dict(iter(val_loader).next()) for i in range(opt.comet.display_size)]
 
     total_steps = 0
 
