@@ -20,6 +20,7 @@ class MaskGenerator(BaseModel):
 
         # specify the training losses you want to print out. The program will call base_model.get_current_losses
         self.loss_names = []
+        self.loss_name = opt.model.loss_name
 
         # specify the models you want to save to the disk. The program will call base_model.save_networks and base_model.load_networks
         if self.isTrain:
@@ -38,10 +39,11 @@ class MaskGenerator(BaseModel):
         self.comet_exp = opt.comet.exp
         self.store_image = opt.val.store_image
         self.overlay = opt.val.overlay
+        self.opt = opt
 
         if self.isTrain:
             # define loss functions
-            self.criterionGAN = networks.GANLoss().to(self.device)
+            self.criterionGAN = networks.GANLoss(self.loss_name).to(self.device)
             # initialize optimizers
 
             self.optimizer_G = torch.optim.Adam(
@@ -81,12 +83,20 @@ class MaskGenerator(BaseModel):
         pred_fake = self.netD(fake_mask_d.detach())
         self.loss_D_fake = self.criterionGAN(pred_fake, False)
 
-        # Combined loss
-        self.loss_D = (self.loss_D_real + self.loss_D_fake) * 0.5
+        if self.loss_name == "wgan":  # Get gradient penalty loss
+            grad_penalty = networks.calc_gradient_penalty(
+                self.opt, self.netD, real_mask_d, fake_mask_d
+            )
+            self.loss_D = (self.loss_D_real + self.loss_D_fake) * 0.5 + grad_penalty
+        else:
+            # Combined loss
+            self.loss_D = (self.loss_D_real + self.loss_D_fake) * 0.5
 
         # Log D loss to comet:
         if self.comet_exp is not None:
             self.comet_exp.log_metric("loss D", self.loss_D.cpu().detach())
+            self.comet_exp.log_metric("loss D real", self.loss_D_real.cpu().detach())
+            self.comet_exp.log_metric("loss D fake", self.loss_D_fake.cpu().detach())
 
         # backward
         self.loss_D.backward()

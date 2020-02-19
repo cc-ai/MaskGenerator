@@ -7,6 +7,7 @@ from torch.optim import lr_scheduler
 from torch.nn import init
 from models.blocks import Conv2dBlock, ConvTranspose2dBlock, ResBlocks
 from utils import *
+import torch.autograd as autograd
 
 ###############################################################################
 # Helper Functions
@@ -58,14 +59,50 @@ def get_norm_layer(norm_type="instance"):
     return norm_layer
 
 
+# def WassersteinLoss(input, target_tensor):
+#    #Use 0.5 threshold to determine whether real or fake
+
+
+def calc_gradient_penalty(opt, netD, real_data, fake_data):
+    DIM = opt.data.img_size
+    LAMBDA = 10
+    nc = opt.dis.default.input_nc
+    alpha = torch.rand(real_data.shape)
+    # alpha = alpha.view(batch_size, nc, DIM, DIM)
+    # alpha = alpha.expand(batch_size, int(real_data.nelement() / batch_size)).contiguous()
+
+    alpha = alpha.cuda()
+    interpolates = alpha * real_data.detach() + ((1 - alpha) * fake_data.detach())
+
+    interpolates = interpolates.cuda()
+    interpolates.requires_grad_(True)
+
+    disc_interpolates = netD(interpolates)
+
+    gradients = autograd.grad(
+        outputs=disc_interpolates,
+        inputs=interpolates,
+        grad_outputs=torch.ones(disc_interpolates.size()).cuda(),
+        create_graph=True,
+        retain_graph=True,
+        only_inputs=True,
+    )[0]
+
+    gradients = gradients.view(gradients.size(0), -1)
+    gradient_penalty = ((gradients.norm(2, dim=1) - 1) ** 2).mean() * LAMBDA
+    return gradient_penalty
+
+
 class GANLoss(nn.Module):
     def __init__(self, loss_name="lsgan", target_real_label=1.0, target_fake_label=0.0):
         super(GANLoss, self).__init__()
         self.register_buffer("real_label", torch.tensor(target_real_label))
         self.register_buffer("fake_label", torch.tensor(target_fake_label))
+        self.loss_name = loss_name
         if loss_name == "lsgan":
             self.loss = nn.MSELoss()
-        # elif loss_name = 'wgan':
+        elif loss_name == "wgan":
+            self.loss = lambda x: torch.mean(x)
         else:
             self.loss = nn.BCELoss()
 
@@ -77,8 +114,14 @@ class GANLoss(nn.Module):
         return target_tensor.expand_as(input)
 
     def __call__(self, input, target_is_real):
-        target_tensor = self.get_target_tensor(input, target_is_real)
-        return self.loss(input, target_tensor)
+        if self.loss_name == "wgan":
+            if target_is_real:  # Miminize value
+                return self.loss(input)
+            else:  # Maximize value
+                return -self.loss(input)
+        else:
+            target_tensor = self.get_target_tensor(input, target_is_real)
+            return self.loss(input, target_tensor)
 
 
 def define_G(opts):
