@@ -60,10 +60,11 @@ def set_data_paths(opts):
 
 
 def set_mode(mode, opts):
+
     if mode == "train":
-        opts.mode.is_train = True
+        opts.model.is_train = True
     elif mode == "test":
-        opts.mode.is_train = False
+        opts.model.is_train = False
 
     return opts
 

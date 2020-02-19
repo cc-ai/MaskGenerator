@@ -6,14 +6,13 @@ from utils import *
 from data.datasets import get_loader
 import copy
 
-
 # from data import CreateDataLoader
 # from models import create_model
 # from util.visualizer import Visualizer
 
 if __name__ == "__main__":
     root = Path(__file__).parent.resolve()
-    opt_file = "shared/sim.yml"
+    opt_file = "example_files/testing.yml"
 
     opt = load_opts(path=root / opt_file, default=root / "shared/defaults.yml")
     opt = set_mode("train", opt)

@@ -37,6 +37,7 @@ class MaskGenerator(BaseModel):
         self.netD = networks.define_D(opt).to(self.device)
         self.comet_exp = opt.comet.exp
         self.store_image = opt.val.store_image
+        self.overlay = opt.val.overlay
 
         if self.isTrain:
             # define loss functions
@@ -116,11 +117,29 @@ class MaskGenerator(BaseModel):
         self.optimizer_D.step()
 
     def save_test_images(self, test_display_data, curr_iter):
+        overlay = self.overlay
         save_images = []
         for i in range(len(test_display_data)):
             self.set_input(test_display_data[i])
             self.test()
             save_images.append(self.image[0])
-            save_images.append(self.mask[0].repeat(3, 1, 1))
-            save_images.append(self.fake_mask[0].repeat(3, 1, 1))  # This means save 3 per row
+            # Overlay mask:
+            save_mask = (
+                self.image[0]
+                - (self.image[0] * self.mask[0].repeat(3, 1, 1))
+                + self.mask[0].repeat(3, 1, 1)
+            )
+
+            save_fake_mask = (
+                self.image[0]
+                - (self.image[0] * self.fake_mask[0].repeat(3, 1, 1))
+                + self.fake_mask[0].repeat(3, 1, 1)
+            )
+
+            if overlay:
+                save_images.append(save_mask)
+                save_images.append(save_fake_mask)
+            else:
+                save_images.append(self.mask[0].repeat(3, 1, 1))
+                save_images.append(self.fake_mask[0].repeat(3, 1, 1))
         write_images(save_images, curr_iter, comet_exp=self.comet_exp, store_im=self.store_image)

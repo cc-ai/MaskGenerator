@@ -130,3 +130,4 @@ val:
   max_log_images: 1
   save_im_freq: 1000
   store_images: false # write to disk on top of comet logging
+  overlay: false
