@@ -76,12 +76,13 @@ class Normalize:
         self.normImage = trsfs.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
         # self.normSeg = trsfs.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
         self.normDepth = trsfs.Normalize([1 / 255], [1 / 3])
-        # self.normMask = lambda m: m / 255
+        self.normMask = lambda m: (m > ((torch.max(m) - torch.min(m)) / 2.0)).float()
 
         self.normalize = {
             "x": self.normImage,
             # "s": self.normSeg,
             "d": self.normDepth,
+            "m": self.normMask,
         }
 
     def __call__(self, data):
