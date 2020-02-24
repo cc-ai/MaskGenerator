@@ -13,7 +13,7 @@ import copy
 
 if __name__ == "__main__":
     root = Path(__file__).parent.resolve()
-    opt_file = "shared/sim.yml"
+    opt_file = "prev_experiments/sim_wgan_11k.yml"
 
     opt = load_opts(path=root / opt_file, default=root / "shared/defaults.yml")
 
