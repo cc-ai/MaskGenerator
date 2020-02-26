@@ -11,4 +11,4 @@ from utils import load_opts
 root = Path(__file__).parent.parent.resolve()
 
 
-opts = load_opts(path=root / "example_files/testing.yml", default=root / "shared/defaults.yml")
+opts = load_opts(path=root / "shared/featureDA.yml", default=root / "shared/defaults.yml")

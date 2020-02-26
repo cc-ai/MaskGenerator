@@ -13,7 +13,7 @@ import copy
 
 if __name__ == "__main__":
     root = Path(__file__).parent.resolve()
-    opt_file = "prev_experiments/sim_wgan_11k.yml"
+    opt_file = "prev_experiments/11k_wgan_featureDA.yml"
 
     opt = load_opts(path=root / opt_file, default=root / "shared/defaults.yml")
 
@@ -42,6 +42,5 @@ if __name__ == "__main__":
         with Timer("Elapsed time in update " + str(i) + ": %f"):
             total_steps += opt.data.loaders.batch_size
             model.set_input(Dict(data))
-            print(Dict(data).data.keys())
             model.save_test_images([Dict(data)], total_steps)
 

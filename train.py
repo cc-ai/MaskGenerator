@@ -12,17 +12,17 @@ import copy
 
 if __name__ == "__main__":
     root = Path(__file__).parent.resolve()
-    opt_file = "prev_experiments/sim_wgan_11k.yml"
+    opt_file = "shared/featureDA.yml" #! make sure to check output dir in config
 
     opt = load_opts(path=root / opt_file, default=root / "shared/defaults.yml")
 
     #! important to do test first
     val_opt = set_mode("test", opt)
-    val_loader = get_loader(val_opt)
+    val_loader = get_loader(val_opt, real=True)
     test_display_images = [Dict(iter(val_loader).next()) for i in range(opt.comet.display_size)]
 
     opt = set_mode("train", opt)
-    loader = get_loader(opt)
+    loader = get_loader(opt, real=True)
     train_display_images = [Dict(iter(loader).next()) for i in range(opt.comet.display_size)]
 
     dataset_size = len(loader)

@@ -246,7 +246,7 @@ class Generator(nn.Module):
 
         z = self.encode(input)
         x = self.decode(z)
-        return x
+        return z, x
 
 
 # Defines the PatchGAN discriminator with the specified arguments.
