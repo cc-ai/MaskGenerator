@@ -25,7 +25,7 @@ class MaskGenerator(BaseModel):
 
         # specify the models you want to save to the disk. The program will call base_model.save_networks and base_model.load_networks
         if self.isTrain:
-            self.model_names = ["G", "D", "D_F"]
+            self.model_names = ["G", "D", "D_F", "D_P"]
 
             # self.model_names = ["G_A", "G_B", "D_A", "D_B"]
         else:  # during test time, only load Gs
@@ -37,12 +37,18 @@ class MaskGenerator(BaseModel):
         # Code (paper): G_A (G), G_B (F), D_A (D_Y), D_B (D_X)
         self.netG = networks.define_G(opt).to(self.device)
         self.netD = networks.define_D(opt).to(self.device)
+
         # Use the latent vector to define input_nc
         opt.dis.default.input_nc = (2 ** opt.gen.encoder.n_downsample) * opt.gen.encoder.dim
         opt.dis.default.n_layers = opt.dis.feature_DA.n_layers
         self.netD_F = networks.define_D(opt).to(
             self.device
         )  # Feature domain adaptation discriminator
+
+        opt.dis.default.input_nc = 1
+        self.netD_P = networks.define_D(opt).to(
+            self.device
+        )  # Pixel domain adaptation discriminator
 
         self.comet_exp = opt.comet.exp
         self.store_image = opt.val.store_image
@@ -69,10 +75,16 @@ class MaskGenerator(BaseModel):
                 lr=opt.dis.opt.lr,
                 betas=(opt.dis.opt.beta1, 0.999),
             )
+            self.optimizer_D_P = torch.optim.Adam(
+                itertools.chain(self.netD_P.parameters()),
+                lr=opt.dis.opt.lr,
+                betas=(opt.dis.opt.beta1, 0.999),
+            )
             self.optimizers = []
             self.optimizers.append(self.optimizer_G)
             self.optimizers.append(self.optimizer_D)
             self.optimizers.append(self.optimizer_D_F)
+            self.optimizers.append(self.optimizer_D_P)
 
     def set_input(self, input):
         # Sim data
@@ -120,6 +132,33 @@ class MaskGenerator(BaseModel):
         # backward
         self.loss_D.backward()
 
+    def backward_D_P(self):
+        # Real (sim)
+        pred_domain_sim = self.netD_P(self.mask)
+        self.loss_D_P_sim = self.criterionGAN(pred_domain_sim, True)
+
+        # Fake (real)
+        pred_domain_real = self.netD_P(self.r_fake_mask.detach())
+        self.loss_D_P_real = self.criterionGAN(pred_domain_real, False)
+
+        if self.loss_name == "wgan":  # Get gradient penalty loss
+            grad_penalty = networks.calc_gradient_penalty(
+                self.opt, self.netD_P, self.mask, self.r_fake_mask
+            )
+            self.loss_D_P = (self.loss_D_P_sim + self.loss_D_P_real) * 0.5 + grad_penalty
+        else:
+            # Combined loss
+            self.loss_D_P = (self.loss_D_P_sim + self.loss_D_P_real) * 0.5
+
+        # Log D loss to comet:
+        if self.comet_exp is not None:
+            self.comet_exp.log_metric("loss D Pixel DA", self.loss_D_P.cpu().detach())
+            self.comet_exp.log_metric("loss D Pixel DA sim", self.loss_D_P_sim.cpu().detach())
+            self.comet_exp.log_metric("loss D Pixel DA real", self.loss_D_P_real.cpu().detach())
+
+        # backward
+        self.loss_D_P.backward()
+
     def backward_D_F(self):
         # Feature Domain adaptation
         # Treat sim as "True" and real as "False"
@@ -159,13 +198,17 @@ class MaskGenerator(BaseModel):
             + self.criterionGAN(self.netD_F(self.real_latent_vec), True)
         ) * 0.5
 
-        self.loss_G = self.loss_G_standard + self.loss_G_DA_F
+        # Domain adaptation pixel loss
+        self.loss_G_DA_P = self.criterionGAN(self.netD_P(self.r_fake_mask), True)
+
+        self.loss_G = self.loss_G_standard + (self.loss_G_DA_F + self.loss_G_DA_P) * 0.5
         # Log G loss to comet:
         if self.comet_exp is not None:
             self.comet_exp.log_metric("loss G", self.loss_G.cpu().detach())
             self.comet_exp.log_metric("loss G standard", self.loss_G_standard.cpu().detach())
             self.comet_exp.log_metric("loss G Feature DA", self.loss_G_DA_F.cpu().detach())
-        self.loss_G.backward(retain_graph=True)
+            self.comet_exp.log_metric("loss G Pixel DA", self.loss_G_DA_P.cpu().detach())
+        self.loss_G.backward()
 
     def optimize_parameters(self):
         # forward
@@ -174,6 +217,7 @@ class MaskGenerator(BaseModel):
         # G
         self.set_requires_grad(self.netD, False)
         self.set_requires_grad(self.netD_F, False)
+        self.set_requires_grad(self.netD_P, False)
         self.optimizer_G.zero_grad()
         self.backward_G()
         self.optimizer_G.step()
@@ -189,6 +233,12 @@ class MaskGenerator(BaseModel):
         self.optimizer_D_F.zero_grad()
         self.backward_D_F()
         self.optimizer_D_F.step()
+
+        # D Pixel - Domain adaptation
+        self.set_requires_grad(self.netD_P, True)
+        self.optimizer_D_P.zero_grad()
+        self.backward_D_P()
+        self.optimizer_D_P.step()
 
     def save_test_images(self, test_display_data, curr_iter):
         overlay = self.overlay

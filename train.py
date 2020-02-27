@@ -1,6 +1,8 @@
 import time
 from pathlib import Path
 from comet_ml import Experiment
+
+
 import sys
 from utils import *
 from data.datasets import get_loader
@@ -12,9 +14,10 @@ import copy
 
 if __name__ == "__main__":
     root = Path(__file__).parent.resolve()
-    opt_file = "shared/featureDA.yml" #! make sure to check output dir in config
+    opt_file = "shared/feature_pixelDA.yml"
 
     opt = load_opts(path=root / opt_file, default=root / "shared/defaults.yml")
+    comet_exp = Experiment(workspace=opt.comet.workspace, project_name=opt.comet.project_name)
 
     #! important to do test first
     val_opt = set_mode("test", opt)
@@ -28,7 +31,6 @@ if __name__ == "__main__":
     dataset_size = len(loader)
     print("#training images = %d" % dataset_size)
 
-    comet_exp = Experiment(workspace=opt.comet.workspace, project_name=opt.comet.project_name)
     if comet_exp is not None:
         comet_exp.log_asset(file_data=str(root / opt_file), file_name=root / opt_file)
         comet_exp.log_parameters(opt)

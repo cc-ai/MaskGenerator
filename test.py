@@ -13,7 +13,7 @@ import copy
 
 if __name__ == "__main__":
     root = Path(__file__).parent.resolve()
-    opt_file = "prev_experiments/11k_wgan_featureDA.yml"
+    opt_file = "prev_experiments/11k_wgan_feature_pixelDA.yml"
 
     opt = load_opts(path=root / opt_file, default=root / "shared/defaults.yml")
 
