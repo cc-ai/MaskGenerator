@@ -5,8 +5,8 @@ import subprocess
 from copy import copy
 import yaml
 from addict import Dict
-from torch.nn import init
 import torch
+from torch.nn import init
 import numpy as np
 import importlib
 from models.base_model import BaseModel

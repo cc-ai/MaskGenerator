@@ -5,7 +5,7 @@ import sys
 from utils import *
 from data.datasets import get_loader
 import copy
-
+import argparse
 # from data import CreateDataLoader
 # from models import create_model
 # from util.visualizer import Visualizer
@@ -18,12 +18,13 @@ if __name__ == "__main__":
     default="shared/sim.yaml",
     help="Path to the config file.",
     )  
-    opts = parser.parse_args()
+    parsed = parser.parse_args()
 
     root = Path(__file__).parent.resolve()
-    opt_file = opts.config
-
-    opt = load_opts(path=root / opt_file, default=root / "shared/defaults.yml")
+    
+    opt_file = parsed.config
+    print(opt_file)
+    opt = load_opts(path= opt_file, default=root / "shared/defaults.yml")
 
     #! important to do test first
     val_opt = set_mode("test", opt)

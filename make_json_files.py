@@ -1,47 +1,32 @@
-import time
-from pathlib import Path
-from comet_ml import Experiment
-import sys
-from utils import *
-from data.datasets import get_loader
-import copy
+import os
+import numpy as np
+import glob
+import random
+import json
 
+def get_train_test_dict(root, train_r):
+    """
+    Make json files of images and masks paths.
+    Format is {0: {x: path_to_image, m: path_to_mask}, 1: ...}
+    train_r: ratio of train test 
+    """
+    filenames = [os.path.basename(elem) for elem in glob.glob(os.path.join(root, "Normal/*"))]
+    random.shuffle(filenames)
+    
+    train_index = int(train_r*len(filenames))
+    train = filenames[:train_index]
+    test = filenames[train_index:]
 
-# from data import CreateDataLoader
-# from models import create_model
-# from util.visualizer import Visualizer
+    train_dict = []
+    for i in range(len(train)):
+        train_dict.append( {'x': os.path.join(root, "Normal",train[i]),  'm': os.path.join(root, "Mask",train[i])})
+    test_dict = []
+    for i in range(len(test)):
+        test_dict.append( {'x': os.path.join(root, "Normal",test[i]),  'm': os.path.join(root, "Mask",test[i])})
+    return(train_dict, test_dict)
 
-if __name__ == "__main__":
-    root = Path(__file__).parent.resolve()
-    opt_file = "prev_experiments/sim_wgan_11k.yml"
-
-    opt = load_opts(path=root / opt_file, default=root / "shared/defaults.yml")
-
-    opt = set_mode("test", opt)
-    opt.data.loaders.batch_size = 1
-    val_loader = get_loader(opt)
-    dataset_size = len(val_loader)
-
-    print("#testing images = %d" % dataset_size)
-
-    comet_exp = Experiment(workspace=opt.comet.workspace, project_name=opt.comet.project_name)
-    if comet_exp is not None:
-        comet_exp.log_asset(file_data=str(root / opt_file), file_name=root / opt_file)
-        comet_exp.log_parameters(opt)
-
-    checkpoint_directory, image_directory = prepare_sub_folder(opt.train.output_dir)
-
-    opt.comet.exp = comet_exp
-
-    model = create_model(opt)
-    model.setup()
-
-    total_steps = 0
-
-    for i, data in enumerate(val_loader):
-        with Timer("Elapsed time in update " + str(i) + ": %f"):
-            total_steps += opt.data.loaders.batch_size
-            model.set_input(Dict(data))
-            print(Dict(data).data.keys())
-            model.save_test_images([Dict(data)], total_steps)
-
+def make_filenames_json(train_dict, test_dict, root, postfix = ""):
+    with open(os.path.join(root, "train" + postfix+ ".json"), "w") as write_file:
+        json.dump(train_dict, write_file, indent=4)
+    with open(os.path.join(root, "test" + postfix+ ".json"), "w") as write_file:
+        json.dump(test_dict, write_file, indent=4)
