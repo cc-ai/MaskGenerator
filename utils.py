@@ -134,7 +134,7 @@ def prepare_sub_folder(output_directory):
     return checkpoint_directory, image_directory
 
 
-def write_images(image_outputs, curr_iter, im_per_row=3, comet_exp=None, store_im=False):
+def write_images(image_outputs, curr_iter, im_per_row=3, comet_exp=None, store_im=False, test = True):
     """Save output image
     Arguments:
         image_outputs {Tensor list} -- list of output images
@@ -147,5 +147,7 @@ def write_images(image_outputs, curr_iter, im_per_row=3, comet_exp=None, store_i
     image_grid = image_grid.permute(1, 2, 0).cpu().detach().numpy()
 
     if comet_exp is not None:
-        comet_exp.log_image(image_grid, name="test_iter_" + str(curr_iter))
-
+        if test:
+            comet_exp.log_image(image_grid, name="test_iter_" + str(curr_iter))
+        else: 
+            comet_exp.log_image(image_grid, name="train_iter_" + str(curr_iter))

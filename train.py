@@ -11,8 +11,17 @@ import copy
 # from util.visualizer import Visualizer
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+    "--config",
+    type=str,
+    default="shared/sim.yaml",
+    help="Path to the config file.",
+    )  
+    opts = parser.parse_args()
+
     root = Path(__file__).parent.resolve()
-    opt_file = "prev_experiments/sim_wgan_11k.yml"
+    opt_file = opts.config
 
     opt = load_opts(path=root / opt_file, default=root / "shared/defaults.yml")
 
@@ -59,7 +68,9 @@ if __name__ == "__main__":
                 model.optimize_parameters()
 
                 if total_steps % opt.val.save_im_freq == 0:
-                    model.save_test_images(test_display_images, total_steps)
+                    model.save_test_images(test_display_images, total_steps, test = True)
+                if total_steps % opt.train.save_im_freq == 0:    
+                    model.save_test_images(train_display_images, total_steps, test = False)
 
                 if total_steps % opt.train.save_freq == 0:
                     print(

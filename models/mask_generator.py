@@ -126,7 +126,7 @@ class MaskGenerator(BaseModel):
         self.backward_D()
         self.optimizer_D.step()
 
-    def save_test_images(self, test_display_data, curr_iter):
+    def save_test_images(self, test_display_data, curr_iter, test = True):
         overlay = self.overlay
         save_images = []
         for i in range(len(test_display_data)):
@@ -152,4 +152,4 @@ class MaskGenerator(BaseModel):
             else:
                 save_images.append(self.mask[0].repeat(3, 1, 1))
                 save_images.append(self.fake_mask[0].repeat(3, 1, 1))
-        write_images(save_images, curr_iter, comet_exp=self.comet_exp, store_im=self.store_image)
+        write_images(save_images, curr_iter, comet_exp=self.comet_exp, store_im=self.store_image, test = test)
