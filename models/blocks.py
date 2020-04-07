@@ -1,7 +1,4 @@
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.nn.utils.spectral_norm as spectral_norm
 
 
 class Conv2dBlock(nn.Module):
@@ -60,7 +57,9 @@ class Conv2dBlock(nn.Module):
             assert 0, "Unsupported activation: {}".format(activation)
 
         # initialize convolution
-        self.conv = nn.Conv2d(input_dim, output_dim, kernel_size, stride, bias=self.use_bias)
+        self.conv = nn.Conv2d(
+            input_dim, output_dim, kernel_size, stride, bias=self.use_bias
+        )
 
     def forward(self, x):
         x = self.conv(self.pad(x))
@@ -156,9 +155,15 @@ class ResBlock(nn.Module):
 
         model = []
         model += [
-            Conv2dBlock(dim, dim, 3, 1, 1, norm=norm, activation=activation, pad_type=pad_type)
+            Conv2dBlock(
+                dim, dim, 3, 1, 1, norm=norm, activation=activation, pad_type=pad_type
+            )
         ]
-        model += [Conv2dBlock(dim, dim, 3, 1, 1, norm=norm, activation="none", pad_type=pad_type)]
+        model += [
+            Conv2dBlock(
+                dim, dim, 3, 1, 1, norm=norm, activation="none", pad_type=pad_type
+            )
+        ]
         self.model = nn.Sequential(*model)
 
     def forward(self, x):

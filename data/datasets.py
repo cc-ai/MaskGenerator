@@ -69,7 +69,10 @@ class SimDataset(Dataset):
             return Dict(
                 {
                     "data": self.transform(
-                        {task: pil_image_loader(path, task) for task, path in paths.items()}
+                        {
+                            task: pil_image_loader(path, task)
+                            for task, path in paths.items()
+                        }
                     ),
                     "paths": paths,
                 }
@@ -77,7 +80,9 @@ class SimDataset(Dataset):
 
         return Dict(
             {
-                "data": {task: pil_image_loader(path, task) for task, path in paths.items()},
+                "data": {
+                    task: pil_image_loader(path, task) for task, path in paths.items()
+                },
                 "paths": paths,
             }
         )
@@ -186,7 +191,10 @@ class RealSimDataset(Dataset):
             return Dict(
                 {
                     "data": self.transform(
-                        {task: pil_image_loader(path, task) for task, path in paths.items()}
+                        {
+                            task: pil_image_loader(path, task)
+                            for task, path in paths.items()
+                        }
                     ),
                     "paths": paths,
                 }
@@ -194,7 +202,9 @@ class RealSimDataset(Dataset):
 
         return Dict(
             {
-                "data": {task: pil_image_loader(path, task) for task, path in paths.items()},
+                "data": {
+                    task: pil_image_loader(path, task) for task, path in paths.items()
+                },
                 "paths": paths,
             }
         )
@@ -206,7 +216,9 @@ class RealSimDataset(Dataset):
 def get_loader(opts, real=True):
     if real:
         return DataLoader(
-            RealSimDataset(opts, transform=transforms.Compose(get_transforms(Dict(opts)))),
+            RealSimDataset(
+                opts, transform=transforms.Compose(get_transforms(Dict(opts)))
+            ),
             batch_size=opts.data.loaders.get("batch_size", 4),
             shuffle=True,
             num_workers=opts.data.loaders.get("num_workers", 8),
@@ -218,4 +230,3 @@ def get_loader(opts, real=True):
             shuffle=True,
             num_workers=opts.data.loaders.get("num_workers", 8),
         )
-

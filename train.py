@@ -1,12 +1,9 @@
+from comet_ml import Experiment
 import time
 from pathlib import Path
-from comet_ml import Experiment
-
-
-import sys
-from utils import *
+from addict import Dict
+from utils import load_opts, set_mode, prepare_sub_folder, create_model, Timer
 from data.datasets import get_loader
-import copy
 
 # from data import CreateDataLoader
 # from models import create_model
@@ -17,16 +14,22 @@ if __name__ == "__main__":
     opt_file = "shared/feature_pixelDA.yml"
 
     opt = load_opts(path=root / opt_file, default=root / "shared/defaults.yml")
-    comet_exp = Experiment(workspace=opt.comet.workspace, project_name=opt.comet.project_name)
+    comet_exp = Experiment(
+        workspace=opt.comet.workspace, project_name=opt.comet.project_name
+    )
 
     #! important to do test first
     val_opt = set_mode("test", opt)
     val_loader = get_loader(val_opt, real=True)
-    test_display_images = [Dict(iter(val_loader).next()) for i in range(opt.comet.display_size)]
+    test_display_images = [
+        Dict(iter(val_loader).next()) for i in range(opt.comet.display_size)
+    ]
 
     opt = set_mode("train", opt)
     loader = get_loader(opt, real=True)
-    train_display_images = [Dict(iter(loader).next()) for i in range(opt.comet.display_size)]
+    train_display_images = [
+        Dict(iter(loader).next()) for i in range(opt.comet.display_size)
+    ]
 
     dataset_size = len(loader)
     print("#training images = %d" % dataset_size)
@@ -65,7 +68,8 @@ if __name__ == "__main__":
 
                 if total_steps % opt.train.save_freq == 0:
                     print(
-                        "saving the latest model (epoch %d, total_steps %d)" % (epoch, total_steps)
+                        "saving the latest model (epoch %d, total_steps %d)"
+                        % (epoch, total_steps)
                     )
                     save_suffix = "iter_%d" % total_steps
                     model.save_networks(save_suffix)
@@ -84,4 +88,3 @@ if __name__ == "__main__":
         )
         model.update_learning_rate()
         """
-

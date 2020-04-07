@@ -1,9 +1,6 @@
-import os
 from pathlib import Path
-import argparse
 import torch
 import sys
-import math
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
@@ -33,13 +30,17 @@ if __name__ == "__main__":
     print("Dis output shape: ", dis_output.shape)
 
     print("Testing sim/real feature discriminator...")
-    opts.dis.default.input_nc = (2 ** opts.gen.encoder.n_downsample) * opts.gen.encoder.dim
+    opts.dis.default.input_nc = (
+        2 ** opts.gen.encoder.n_downsample
+    ) * opts.gen.encoder.dim
     print(opts.dis.default.input_nc)
     dis = define_D(opts)
     dis = dis.to(device)
 
     test_image = (
-        torch.Tensor(batch_size, opts.dis.default.input_nc, 128, 128).uniform_(-1, 1).to(device)
+        torch.Tensor(batch_size, opts.dis.default.input_nc, 128, 128)
+        .uniform_(-1, 1)
+        .to(device)
     )
     dis_output = dis(test_image)
     print("Dis Feature DA output shape: ", dis_output.shape)
