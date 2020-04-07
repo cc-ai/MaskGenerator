@@ -1,7 +1,5 @@
 import os
 import torch
-from collections import OrderedDict
-from . import networks
 
 
 class BaseModel:
@@ -73,7 +71,8 @@ class BaseModel:
         print("learning rate = %.7f" % lr)
         """
 
-    # return traning losses/errors. train.py will print out these errors as debugging information
+    # return traning losses/errors.
+    # train.py will print out these errors as debugging information
     def get_current_losses(self):
         print("get losses")
         """
@@ -120,7 +119,9 @@ class BaseModel:
                 for key in list(
                     state_dict.keys()
                 ):  # need to copy keys here because we mutate in loop
-                    self.__patch_instance_norm_state_dict(state_dict, net, key.split("."))
+                    self.__patch_instance_norm_state_dict(
+                        state_dict, net, key.split(".")
+                    )
                 net.load_state_dict(state_dict)
 
     # print network information
@@ -134,7 +135,10 @@ class BaseModel:
                     num_params += param.numel()
                 if verbose:
                     print(net)
-                print("[Network %s] Total number of parameters : %.3f M" % (name, num_params / 1e6))
+                print(
+                    "[Network %s] Total number of parameters : %.3f M"
+                    % (name, num_params / 1e6)
+                )
         print("-----------------------------------------------")
 
     # set requies_grad=Fasle to avoid computation
@@ -159,4 +163,6 @@ class BaseModel:
             ):
                 state_dict.pop(".".join(keys))
         else:
-            self.__patch_instance_norm_state_dict(state_dict, getattr(module, key), keys, i + 1)
+            self.__patch_instance_norm_state_dict(
+                state_dict, getattr(module, key), keys, i + 1
+            )

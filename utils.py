@@ -1,19 +1,13 @@
 import os
-import re
 from pathlib import Path
-import subprocess
-from copy import copy
 import yaml
 from addict import Dict
-from torch.nn import init
 import torch
-import numpy as np
 import importlib
 from models.base_model import BaseModel
-import functools
-import torch.nn as nn
 import time
 import torchvision.utils as vutils
+from torch.optim import lr_scheduler
 
 
 def load_opts(path=None, default=None):
@@ -54,7 +48,9 @@ def set_data_paths(opts):
 
     for mode in ["train", "val"]:
         for domain in opts.data.files[mode]:
-            opts.data.files[mode] = str(Path(opts.data.files.base) / opts.data.files[mode])
+            opts.data.files[mode] = str(
+                Path(opts.data.files.base) / opts.data.files[mode]
+            )
             if opts.data.use_real:
                 opts.data.real_files[mode] = str(
                     Path(opts.data.real_files.base) / opts.data.real_files[mode]
@@ -90,20 +86,28 @@ def get_scheduler(optimizer, opt):
     if opt.lr_policy == "lambda":
 
         def lambda_rule(epoch):
-            lr_l = 1.0 - max(0, epoch + opt.epoch_count - opt.niter) / float(opt.niter_decay + 1)
+            lr_l = 1.0 - max(0, epoch + opt.epoch_count - opt.niter) / float(
+                opt.niter_decay + 1
+            )
             return lr_l
 
         scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_rule)
     elif opt.lr_policy == "step":
-        scheduler = lr_scheduler.StepLR(optimizer, step_size=opt.lr_decay_iters, gamma=0.1)
+        scheduler = lr_scheduler.StepLR(
+            optimizer, step_size=opt.lr_decay_iters, gamma=0.1
+        )
     elif opt.lr_policy == "plateau":
         scheduler = lr_scheduler.ReduceLROnPlateau(
             optimizer, mode="min", factor=0.2, threshold=0.01, patience=5
         )
     elif opt.lr_policy == "cosine":
-        scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=opt.niter, eta_min=0)
+        scheduler = lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=opt.niter, eta_min=0
+        )
     else:
-        return NotImplementedError("learning rate policy [%s] is not implemented", opt.lr_policy)
+        return NotImplementedError(
+            "learning rate policy [%s] is not implemented", opt.lr_policy
+        )
     return scheduler
 
 
@@ -137,7 +141,9 @@ def prepare_sub_folder(output_directory):
     return checkpoint_directory, image_directory
 
 
-def write_images(image_outputs, curr_iter, im_per_row=3, comet_exp=None, store_im=False):
+def write_images(
+    image_outputs, curr_iter, im_per_row=3, comet_exp=None, store_im=False
+):
     """Save output image
     Arguments:
         image_outputs {Tensor list} -- list of output images
@@ -146,9 +152,10 @@ def write_images(image_outputs, curr_iter, im_per_row=3, comet_exp=None, store_i
     """
 
     image_outputs = torch.stack(image_outputs)
-    image_grid = vutils.make_grid(image_outputs, nrow=im_per_row, normalize=True, scale_each=True)
+    image_grid = vutils.make_grid(
+        image_outputs, nrow=im_per_row, normalize=True, scale_each=True
+    )
     image_grid = image_grid.permute(1, 2, 0).cpu().detach().numpy()
 
     if comet_exp is not None:
         comet_exp.log_image(image_grid, name="test_iter_" + str(curr_iter))
-

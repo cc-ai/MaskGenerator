@@ -2,7 +2,6 @@ import torch
 from torchvision import transforms as trsfs
 import torchvision.transforms.functional as TF
 import numpy as np
-import torch.nn as nn
 
 
 class Resize:
@@ -37,7 +36,9 @@ class RandomCrop:
         h, w = data["x"].size[-2:]
         top = np.random.randint(0, h - self.h)
         left = np.random.randint(0, w - self.w)
-        return {task: TF.crop(im, top, left, self.h, self.w) for task, im in data.items()}
+        return {
+            task: TF.crop(im, top, left, self.h, self.w) for task, im in data.items()
+        }
 
 
 class RandomVerticalFlip:
@@ -65,7 +66,9 @@ class ToTensor:
             elif task in {"h", "d", "w", "m", "rm"}:
                 new_data[task] = self.MaptoTensor(im)
             elif task == "s":
-                new_data[task] = torch.squeeze(torch.from_numpy(np.array(im))).to(torch.int64)
+                new_data[task] = torch.squeeze(torch.from_numpy(np.array(im))).to(
+                    torch.int64
+                )
             else:
                 print("ERROR: Task not found")
         return new_data
@@ -89,7 +92,8 @@ class Normalize:
 
     def __call__(self, data):
         return {
-            task: self.normalize.get(task, lambda x: x)(tensor) for task, tensor in data.items()
+            task: self.normalize.get(task, lambda x: x)(tensor)
+            for task, tensor in data.items()
         }
 
 
@@ -114,10 +118,7 @@ def get_transforms(opts):
     """Get all the transform functions listed in opts.data.transforms
     using get_transform(transform_item)
     """
-    last_transforms = [
-        ToTensor(),
-        Normalize(),
-    ]
+    last_transforms = [ToTensor(), Normalize()]
 
     conf_transforms = []
     for t in opts.data.transforms:
