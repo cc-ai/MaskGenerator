@@ -15,6 +15,7 @@ from utils import (
 from data.datasets import get_loader
 from collections import deque
 import argparse
+from models.mask_generator import MaskGenerator
 
 if __name__ == "__main__":
 
@@ -64,7 +65,7 @@ if __name__ == "__main__":
     print("Loaders created. Creating network:")
 
     opts.comet.exp = comet_exp
-    model = create_model(opts)
+    model: MaskGenerator = create_model(opts)
     model.setup()
 
     total_steps = 0
