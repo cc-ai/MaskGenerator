@@ -47,14 +47,13 @@ def set_data_paths(opts):
     """
 
     for mode in ["train", "val"]:
-        for domain in opts.data.files[mode]:
-            opts.data.files[mode] = str(
-                Path(opts.data.files.base) / opts.data.files[mode]
+        opts.data.files[mode] = str(
+            Path(opts.data.files.base) / opts.data.files[mode]
+        )
+        if opts.data.use_real:
+            opts.data.real_files[mode] = str(
+                Path(opts.data.real_files.base) / opts.data.real_files[mode]
             )
-            if opts.data.use_real:
-                opts.data.real_files[mode] = str(
-                    Path(opts.data.real_files.base) / opts.data.real_files[mode]
-                )
     return opts
 
 
