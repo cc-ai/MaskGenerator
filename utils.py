@@ -39,6 +39,25 @@ def load_opts(path=None, default=None):
     return set_data_paths(default_opts)
 
 
+def env_to_path(path):
+    """Transorms an environment variable mention in a json
+    into its actual value. E.g. $HOME/clouds -> /home/vsch/clouds
+
+    Args:
+        path (str): path potentially containing the env variable
+
+    """
+    path = str(path)
+    path_elements = path.split("/")
+    new_path = []
+    for el in path_elements:
+        if "$" in el:
+            new_path.append(os.environ[el.replace("$", "")])
+        else:
+            new_path.append(el)
+    return "/".join(new_path)
+
+
 def set_data_paths(opts):
     """Update the data files paths in data.files.train and data.files.val
     from data.files.base
@@ -49,10 +68,12 @@ def set_data_paths(opts):
     """
 
     for mode in ["train", "val"]:
-        opts.data.files[mode] = str(Path(opts.data.files.base) / opts.data.files[mode])
+        opts.data.files[mode] = str(
+            Path(env_to_path(opts.data.files.base)) / opts.data.files[mode]
+        )
         if opts.data.use_real:
             opts.data.real_files[mode] = str(
-                Path(opts.data.real_files.base) / opts.data.real_files[mode]
+                Path(env_to_path(opts.data.files.base)) / opts.data.real_files[mode]
             )
     return opts
 
@@ -216,3 +237,17 @@ def flatten_opts(opts):
 
     p(opts, vals=values_list)
     return dict(values_list)
+
+
+def print_opts(flats):
+    """print flatenned opts
+
+    Args:
+        flats (dict): flatenned options
+    """
+    print(
+        "\n".join(
+            "{:30}: {:15}".format(k, v if v is not None else "")
+            for k, v in flats.items()
+        )
+    )

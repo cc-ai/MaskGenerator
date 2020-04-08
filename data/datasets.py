@@ -15,7 +15,7 @@ IMG_EXTENSIONS = set(
 
 
 class SimDataset(Dataset):
-    def __init__(self, opts, transform=None):
+    def __init__(self, opts, transform=None, no_check=False):
 
         isTrain = opts.model.is_train
         if isTrain:
@@ -31,6 +31,8 @@ class SimDataset(Dataset):
             raise ValueError("Unknown file list type in {}".format(file_list_path))
 
         self.file_list_path = str(file_list_path)
+        if not no_check:
+            self.check_samples()
         self.check_samples()
         self.transform = transform
         self.opts = opts
@@ -40,7 +42,9 @@ class SimDataset(Dataset):
         exist on the file-system
         """
         print(
-            f"Cheking {len(self.samples_paths)} samples in {self.file_list_path}...",
+            "Cheking {} samples in {}...".format(
+                len(self.samples_paths), self.file_list_path
+            ),
             end="",
             flush=True,
         )
@@ -129,7 +133,7 @@ def is_image_file(filename):
 
 
 class RealSimDataset(Dataset):
-    def __init__(self, opts, transform=None):
+    def __init__(self, opts, transform=None, no_check=False):
 
         isTrain = opts.model.is_train
         if isTrain:
@@ -148,9 +152,10 @@ class RealSimDataset(Dataset):
         else:
             raise ValueError("Unknown file list type in {}".format(file_list_path))
 
-        self.check_samples()
         self.file_list_path = str(file_list_path)
         self.real_file_list_path = str(real_file_list_path)
+        if not no_check:
+            self.check_samples()
         self.transform = transform
         self.opts = opts
 
@@ -158,13 +163,23 @@ class RealSimDataset(Dataset):
         """Checks that every file listed in samples_paths actually
         exist on the file-system
         """
+        l, p = (len(self.samples_paths), self.file_list_path)
+        print(f"Cheking {l} samples in {p}...", end="", flush=True)
+
         for s in self.samples_paths:
             for k, v in s.items():
                 assert Path(v).exists(), f"{k} {v} does not exist"
 
+        print(" ok.")
+
+        l, p = (len(self.real_samples_paths), self.real_file_list_path)
+        print(f"Cheking {l} samples in {p}...", end="", flush=True)
+
         for s in self.real_samples_paths:
             for k, v in s.items():
                 assert Path(v).exists(), f"{k} {v} does not exist"
+
+        print(" ok.")
 
     def json_load(self, file_path):
         with open(file_path, "r") as f:
@@ -219,11 +234,13 @@ class RealSimDataset(Dataset):
         return len(self.samples_paths)
 
 
-def get_loader(opts, real=True):
+def get_loader(opts, real=True, no_check=False):
     if real:
         return DataLoader(
             RealSimDataset(
-                opts, transform=transforms.Compose(get_transforms(Dict(opts)))
+                opts,
+                transform=transforms.Compose(get_transforms(Dict(opts))),
+                no_check=no_check,
             ),
             batch_size=opts.data.loaders.get("batch_size", 4),
             shuffle=opts.model.is_train,
@@ -231,7 +248,11 @@ def get_loader(opts, real=True):
         )
     else:
         return DataLoader(
-            SimDataset(opts, transform=transforms.Compose(get_transforms(Dict(opts)))),
+            SimDataset(
+                opts,
+                transform=transforms.Compose(get_transforms(Dict(opts))),
+                no_check=no_check,
+            ),
             batch_size=opts.data.loaders.get("batch_size", 4),
             shuffle=opts.model.is_train,
             num_workers=opts.data.loaders.get("num_workers", 8),
