@@ -73,7 +73,8 @@ def set_data_paths(opts):
         )
         if opts.data.use_real:
             opts.data.real_files[mode] = str(
-                Path(env_to_path(opts.data.files.base)) / opts.data.real_files[mode]
+                Path(env_to_path(opts.data.real_files.base))
+                / opts.data.real_files[mode]
             )
     return opts
 
