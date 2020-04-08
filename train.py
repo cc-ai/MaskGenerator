@@ -14,22 +14,22 @@ if __name__ == "__main__":
     root = Path(__file__).parent.resolve()
     opt_file = "shared/feature_pixelDA.yml"
 
-    opt = load_opts(path=root / opt_file, default=root / "shared/defaults.yml")
+    opts = load_opts(path=root / opt_file, default=root / "shared/defaults.yml")
     comet_exp = Experiment(
-        workspace=opt.comet.workspace, project_name=opt.comet.project_name
+        workspace=opts.comet.workspace, project_name=opts.comet.project_name
     )
 
     # ! important to do test first
-    val_opt = set_mode("test", opt)
+    val_opt = set_mode("test", opts)
     val_loader = get_loader(val_opt, real=True)
     test_display_images = [
-        Dict(iter(val_loader).next()) for i in range(opt.comet.display_size)
+        Dict(iter(val_loader).next()) for i in range(opts.comet.display_size)
     ]
 
-    opt = set_mode("train", opt)
-    loader = get_loader(opt, real=True)
+    opts = set_mode("train", opts)
+    loader = get_loader(opts, real=True)
     train_display_images = [
-        Dict(iter(loader).next()) for i in range(opt.comet.display_size)
+        Dict(iter(loader).next()) for i in range(opts.comet.display_size)
     ]
 
     dataset_size = len(loader)
@@ -37,21 +37,21 @@ if __name__ == "__main__":
 
     if comet_exp is not None:
         comet_exp.log_asset(file_data=str(root / opt_file), file_name=root / opt_file)
-        comet_exp.log_parameters(opt)
+        comet_exp.log_parameters(opts)
 
-    checkpoint_directory, image_directory = prepare_sub_folder(opt.train.output_dir)
+    checkpoint_directory, image_directory = prepare_sub_folder(opts.train.output_dir)
 
-    opt.comet.exp = comet_exp
+    opts.comet.exp = comet_exp
 
-    model = create_model(opt)
+    model = create_model(opts)
     model.setup()
 
     total_steps = 0
     times = deque([0], maxlen=100)
-    batch_size = opt.data.loaders.batch_size
+    batch_size = opts.data.loaders.batch_size
     time_str = "Average time per sample at step {}: {:.3f}"
 
-    for epoch in range(opt.train.epochs):
+    for epoch in range(opts.train.epochs):
         for i, data in enumerate(loader):
             times.append(time())
             total_steps += batch_size
@@ -62,10 +62,10 @@ if __name__ == "__main__":
             if total_steps // batch_size % 25 == 0:
                 print(time_str.format(total_steps, avg_duration(times)))
 
-            if total_steps % opt.val.save_im_freq == 0:
+            if total_steps % opts.val.save_im_freq == 0:
                 model.save_test_images(test_display_images, total_steps)
 
-            if total_steps % opt.train.save_freq == 0:
+            if total_steps % opts.train.save_freq == 0:
                 print(
                     "saving the latest model (epoch %d, total_steps %d)"
                     % (epoch, total_steps)
