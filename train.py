@@ -60,7 +60,9 @@ if __name__ == "__main__":
             model.optimize_parameters()
 
             if total_steps // batch_size % 25 == 0:
-                print(time_str.format(total_steps, avg_duration(times)))
+                avg = avg_duration(times)
+                print(time_str.format(total_steps, avg))
+                model.comet_exp.log_metric("sample_time", avg, step=total_steps)
 
             if total_steps % opts.val.save_im_freq == 0:
                 model.save_test_images(test_display_images, total_steps)

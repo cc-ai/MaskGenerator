@@ -15,13 +15,13 @@ class MaskGenerator(BaseModel):
         print("modifying opts")
         return opts
 
-    def initialize(self, opt):
-        BaseModel.initialize(self, opt)
+    def initialize(self, opts):
+        BaseModel.initialize(self, opts)
 
         # specify the training losses you want to print out.
         # The program will call base_model.get_current_losses
         self.loss_names = []
-        self.loss_name = opt.model.loss_name
+        self.loss_name = opts.model.loss_name
 
         # specify the models you want to save to the disk.
         # The program will call base_model.save_networks and base_model.load_networks
@@ -36,27 +36,27 @@ class MaskGenerator(BaseModel):
         # load/define networks
         # The naming conversion is different from those used in the paper
         # Code (paper): G_A (G), G_B (F), D_A (D_Y), D_B (D_X)
-        self.netG = networks.define_G(opt).to(self.device)
-        self.netD = networks.define_D(opt).to(self.device)
+        self.netG = networks.define_G(opts).to(self.device)
+        self.netD = networks.define_D(opts).to(self.device)
 
         # Use the latent vector to define input_nc
-        opt.dis.default.input_nc = (
-            2 ** opt.gen.encoder.n_downsample
-        ) * opt.gen.encoder.dim
-        opt.dis.default.n_layers = opt.dis.feature_DA.n_layers
-        self.netD_F = networks.define_D(opt).to(
+        opts.dis.default.input_nc = (
+            2 ** opts.gen.encoder.n_downsample
+        ) * opts.gen.encoder.dim
+        opts.dis.default.n_layers = opts.dis.feature_DA.n_layers
+        self.netD_F = networks.define_D(opts).to(
             self.device
         )  # Feature domain adaptation discriminator
 
-        opt.dis.default.input_nc = 1
-        self.netD_P = networks.define_D(opt).to(
+        opts.dis.default.input_nc = 1
+        self.netD_P = networks.define_D(opts).to(
             self.device
         )  # Pixel domain adaptation discriminator
 
-        self.comet_exp = opt.comet.exp
-        self.store_image = opt.val.store_image
-        self.overlay = opt.val.overlay
-        self.opt = opt
+        self.comet_exp = opts.comet.exp
+        self.store_image = opts.val.store_image
+        self.overlay = opts.val.overlay
+        self.opts = opts
 
         if self.isTrain:
             # define loss functions
@@ -65,23 +65,23 @@ class MaskGenerator(BaseModel):
 
             self.optimizer_G = torch.optim.Adam(
                 itertools.chain(self.netG.parameters()),
-                lr=opt.gen.opt.lr,
-                betas=(opt.gen.opt.beta1, 0.999),
+                lr=opts.gen.opts.lr,
+                betas=(opts.gen.opts.beta1, 0.999),
             )
             self.optimizer_D = torch.optim.Adam(
                 itertools.chain(self.netD.parameters()),
-                lr=opt.dis.opt.lr,
-                betas=(opt.dis.opt.beta1, 0.999),
+                lr=opts.dis.opts.lr,
+                betas=(opts.dis.opts.beta1, 0.999),
             )
             self.optimizer_D_F = torch.optim.Adam(
                 itertools.chain(self.netD_F.parameters()),
-                lr=opt.dis.opt.lr,
-                betas=(opt.dis.opt.beta1, 0.999),
+                lr=opts.dis.opts.lr,
+                betas=(opts.dis.opts.beta1, 0.999),
             )
             self.optimizer_D_P = torch.optim.Adam(
                 itertools.chain(self.netD_P.parameters()),
-                lr=opt.dis.opt.lr,
-                betas=(opt.dis.opt.beta1, 0.999),
+                lr=opts.dis.opts.lr,
+                betas=(opts.dis.opts.beta1, 0.999),
             )
             self.optimizers = []
             self.optimizers.append(self.optimizer_G)
@@ -119,7 +119,7 @@ class MaskGenerator(BaseModel):
 
         if self.loss_name == "wgan":  # Get gradient penalty loss
             grad_penalty = networks.calc_gradient_penalty(
-                self.opt, self.netD, real_mask_d, fake_mask_d
+                self.opts, self.netD, real_mask_d, fake_mask_d
             )
             self.loss_D = (self.loss_D_real + self.loss_D_fake) * 0.5 + grad_penalty
         else:
@@ -146,7 +146,7 @@ class MaskGenerator(BaseModel):
 
         if self.loss_name == "wgan":  # Get gradient penalty loss
             grad_penalty = networks.calc_gradient_penalty(
-                self.opt, self.netD_P, self.mask, self.r_fake_mask
+                self.opts, self.netD_P, self.mask, self.r_fake_mask
             )
             self.loss_D_P = (
                 self.loss_D_P_sim + self.loss_D_P_real
@@ -179,7 +179,7 @@ class MaskGenerator(BaseModel):
         ###
         if self.loss_name == "wgan":  # Get gradient penalty loss
             grad_penalty = networks.calc_gradient_penalty(
-                self.opt, self.netD_F, self.sim_latent_vec, self.real_latent_vec
+                self.opts, self.netD_F, self.sim_latent_vec, self.real_latent_vec
             )
             self.loss_D_F = (
                 self.loss_D_F_sim + self.loss_D_F_real

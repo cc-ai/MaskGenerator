@@ -63,10 +63,10 @@ def get_norm_layer(norm_type="instance"):
 #    #Use 0.5 threshold to determine whether real or fake
 
 
-def calc_gradient_penalty(opt, netD, real_data, fake_data):
-    DIM = opt.data.img_size
+def calc_gradient_penalty(opts, netD, real_data, fake_data):
+    DIM = opts.data.img_size
     LAMBDA = 10
-    nc = opt.dis.default.input_nc
+    nc = opts.dis.default.input_nc
     alpha = torch.rand(real_data.shape)
     # alpha = alpha.view(batch_size, nc, DIM, DIM)
     # alpha = alpha.expand(
@@ -139,8 +139,8 @@ def define_G(opts):
     dec_norm = opts.gen.decoder.norm
     res_norm = opts.gen.encoder.res_norm
 
-    init_type = opts.gen.opt.init_type
-    init_gain = opts.gen.opt.init_gain
+    init_type = opts.gen.opts.init_type
+    init_gain = opts.gen.opts.init_gain
 
     net = None
 
@@ -174,8 +174,8 @@ def define_D(opts):
     nf_mult = opts.dis.default.nf_mult
     nf_mult_prev = opts.dis.default.nf_mult_prev
 
-    init_type = opts.gen.opt.init_type
-    init_gain = opts.gen.opt.init_gain
+    init_type = opts.gen.opts.init_type
+    init_gain = opts.gen.opts.init_gain
 
     net = None
 

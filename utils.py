@@ -66,45 +66,45 @@ def set_mode(mode, opts):
     return opts
 
 
-def create_model(opt):
+def create_model(opts):
     # Find model in "models" folder
-    model_name = str(opt.model.model_name)
+    model_name = str(opts.model.model_name)
     modellib = importlib.import_module("models." + model_name)
     target_model_name = model_name.replace("_", "")
     for name, cls in modellib.__dict__.items():
         if name.lower() == target_model_name.lower() and issubclass(cls, BaseModel):
             model = cls
     instance = model()
-    instance.initialize(opt)
+    instance.initialize(opts)
     # print("model [%s] was created" % (instance.name()))
     return instance
 
 
-def get_scheduler(optimizer, opt):
-    if opt.lr_policy == "lambda":
+def get_scheduler(optimizer, opts):
+    if opts.lr_policy == "lambda":
 
         def lambda_rule(epoch):
-            lr_l = 1.0 - max(0, epoch + opt.epoch_count - opt.niter) / float(
-                opt.niter_decay + 1
+            lr_l = 1.0 - max(0, epoch + opts.epoch_count - opts.niter) / float(
+                opts.niter_decay + 1
             )
             return lr_l
 
         scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_rule)
-    elif opt.lr_policy == "step":
+    elif opts.lr_policy == "step":
         scheduler = lr_scheduler.StepLR(
-            optimizer, step_size=opt.lr_decay_iters, gamma=0.1
+            optimizer, step_size=opts.lr_decay_iters, gamma=0.1
         )
-    elif opt.lr_policy == "plateau":
+    elif opts.lr_policy == "plateau":
         scheduler = lr_scheduler.ReduceLROnPlateau(
             optimizer, mode="min", factor=0.2, threshold=0.01, patience=5
         )
-    elif opt.lr_policy == "cosine":
+    elif opts.lr_policy == "cosine":
         scheduler = lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=opt.niter, eta_min=0
+            optimizer, T_max=opts.niter, eta_min=0
         )
     else:
         return NotImplementedError(
-            "learning rate policy [%s] is not implemented", opt.lr_policy
+            "learning rate policy [%s] is not implemented", opts.lr_policy
         )
     return scheduler
 
