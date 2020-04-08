@@ -117,14 +117,13 @@ class MaskGenerator(BaseModel):
         pred_fake = self.netD(fake_mask_d.detach())
         self.loss_D_fake = self.criterionGAN(pred_fake, False)
 
+        self.loss_D = (self.loss_D_real + self.loss_D_fake) * 0.5
+
         if self.loss_name == "wgan":  # Get gradient penalty loss
             grad_penalty = networks.calc_gradient_penalty(
                 self.opts, self.netD, real_mask_d, fake_mask_d
             )
-            self.loss_D = (self.loss_D_real + self.loss_D_fake) * 0.5 + grad_penalty
-        else:
-            # Combined loss
-            self.loss_D = (self.loss_D_real + self.loss_D_fake) * 0.5
+            self.loss_D += grad_penalty
 
         # Log D loss to comet:
         if self.comet_exp is not None:
@@ -143,17 +142,13 @@ class MaskGenerator(BaseModel):
         # Fake (real)
         pred_domain_real = self.netD_P(self.r_fake_mask.detach())
         self.loss_D_P_real = self.criterionGAN(pred_domain_real, False)
+        self.loss_D_P = (self.loss_D_P_sim + self.loss_D_P_real) * 0.5
 
         if self.loss_name == "wgan":  # Get gradient penalty loss
             grad_penalty = networks.calc_gradient_penalty(
                 self.opts, self.netD_P, self.mask, self.r_fake_mask
             )
-            self.loss_D_P = (
-                self.loss_D_P_sim + self.loss_D_P_real
-            ) * 0.5 + grad_penalty
-        else:
-            # Combined loss
-            self.loss_D_P = (self.loss_D_P_sim + self.loss_D_P_real) * 0.5
+            self.loss_D_P += 0.5 + grad_penalty
 
         # Log D loss to comet:
         if self.comet_exp is not None:
@@ -176,17 +171,13 @@ class MaskGenerator(BaseModel):
 
         pred_domain_real = self.netD_F(self.real_latent_vec.detach())
         self.loss_D_F_real = self.criterionGAN(pred_domain_real, False)
-        ###
+        self.loss_D_F = (self.loss_D_F_sim + self.loss_D_F_real) * 0.5
+
         if self.loss_name == "wgan":  # Get gradient penalty loss
             grad_penalty = networks.calc_gradient_penalty(
                 self.opts, self.netD_F, self.sim_latent_vec, self.real_latent_vec
             )
-            self.loss_D_F = (
-                self.loss_D_F_sim + self.loss_D_F_real
-            ) * 0.5 + grad_penalty
-        else:
-            # Combined loss
-            self.loss_D_F = (self.loss_D_F_sim + self.loss_D_F_real) * 0.5
+            self.loss_D_F += 0.5 + grad_penalty
 
         # Log D loss to comet:
         if self.comet_exp is not None:
