@@ -8,6 +8,7 @@ from models.base_model import BaseModel
 import time
 import torchvision.utils as vutils
 from torch.optim import lr_scheduler
+import numpy as np
 
 
 def load_opts(path=None, default=None):
@@ -47,9 +48,7 @@ def set_data_paths(opts):
     """
 
     for mode in ["train", "val"]:
-        opts.data.files[mode] = str(
-            Path(opts.data.files.base) / opts.data.files[mode]
-        )
+        opts.data.files[mode] = str(Path(opts.data.files.base) / opts.data.files[mode])
         if opts.data.use_real:
             opts.data.real_files[mode] = str(
                 Path(opts.data.real_files.base) / opts.data.real_files[mode]
@@ -158,3 +157,16 @@ def write_images(
 
     if comet_exp is not None:
         comet_exp.log_image(image_grid, name="test_iter_" + str(curr_iter))
+
+
+def avg_duration(times):
+    """Given a list of times, return the average duration (i.e. difference of times)
+
+    Args:
+        times ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    t = list(times)
+    return (np.array(t + [0]) - np.array([0] + t))[1:-1].mean()

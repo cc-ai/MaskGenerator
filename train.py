@@ -2,8 +2,9 @@ from comet_ml import Experiment
 import time
 from pathlib import Path
 from addict import Dict
-from utils import load_opts, set_mode, prepare_sub_folder, create_model, Timer
+from utils import load_opts, set_mode, prepare_sub_folder, create_model, avg_duration
 from data.datasets import get_loader
+from collections import deque
 
 # from data import CreateDataLoader
 # from models import create_model
@@ -18,7 +19,7 @@ if __name__ == "__main__":
         workspace=opt.comet.workspace, project_name=opt.comet.project_name
     )
 
-    #! important to do test first
+    # ! important to do test first
     val_opt = set_mode("test", opt)
     val_loader = get_loader(val_opt, real=True)
     test_display_images = [
@@ -46,45 +47,29 @@ if __name__ == "__main__":
     model.setup()
 
     total_steps = 0
+    times = deque([0], maxlen=100)
+    batch_size = opt.data.loaders.batch_size
+    time_str = "Average time per sample at step {}: {:.3f}"
 
     for epoch in range(opt.train.epochs):
-        epoch_start_time = time.time()
-        iter_data_time = time.time()
-        epoch_iter = 0
-
         for i, data in enumerate(loader):
-            with Timer("Elapsed time in update " + str(i) + ": %f"):
-                iter_start_time = time.time()
-                if total_steps % opt.train.print_freq == 0:
-                    t_data = iter_start_time - iter_data_time
-                total_steps += opt.data.loaders.batch_size
-                epoch_iter += opt.data.loaders.batch_size
+            times.append(time())
+            total_steps += batch_size
 
-                model.set_input(Dict(data))
-                model.optimize_parameters()
+            model.set_input(Dict(data))
+            model.optimize_parameters()
 
-                if total_steps % opt.val.save_im_freq == 0:
-                    model.save_test_images(test_display_images, total_steps)
+            if total_steps // batch_size % 25 == 0:
+                print(time_str.format(total_steps, avg_duration(times)))
 
-                if total_steps % opt.train.save_freq == 0:
-                    print(
-                        "saving the latest model (epoch %d, total_steps %d)"
-                        % (epoch, total_steps)
-                    )
-                    save_suffix = "iter_%d" % total_steps
-                    model.save_networks(save_suffix)
+            if total_steps % opt.val.save_im_freq == 0:
+                model.save_test_images(test_display_images, total_steps)
 
-                iter_data_time = time.time()
-
-        """
-        if epoch % opt.save_epoch_freq == 0:
-            print("saving the model at the end of epoch %d, iters %d" % (epoch, total_steps))
-            model.save_networks("latest")
-            model.save_networks(epoch)
-
-        print(
-            "End of epoch %d / %d \t Time Taken: %d sec"
-            % (epoch, opt.niter + opt.niter_decay, time.time() - epoch_start_time)
-        )
-        model.update_learning_rate()
-        """
+            if total_steps % opt.train.save_freq == 0:
+                print(
+                    "saving the latest model (epoch %d, total_steps %d)"
+                    % (epoch, total_steps)
+                )
+                save_suffix = "iter_%d" % total_steps
+                model.save_networks(save_suffix)
+        # model.update_learning_rate()
