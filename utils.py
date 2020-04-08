@@ -57,7 +57,7 @@ def set_data_paths(opts):
 
 
 def set_mode(mode, opts):
-
+    opts = opts.copy()
     if mode == "train":
         opts.model.is_train = True
     elif mode == "test":
