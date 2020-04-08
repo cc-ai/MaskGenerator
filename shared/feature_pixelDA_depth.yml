@@ -1,0 +1,151 @@
+
+# ----------------
+# ----- Data -----
+# ----------------
+data:
+  use_real: False
+  depth: True
+  files: # if one is not none it will override the dirs location
+    base: "/network/home/tengmeli/MaskGen/files_lists" #tmp1/ccai/data/mask_generation/WD" # ! Check output_dir
+    train: train_depth.json
+    val: test_depth.json
+  
+  real_files:
+    base: "/network/tmp1/ccai/data/mask_generation/real"
+    train: train.json
+    val: test.json
+
+  img_size: 256
+
+  loaders:
+    batch_size: 4
+    shuffle: True
+    num_workers: 4
+  transforms:
+    - name: hflip
+      ignore: true
+      p: 0.5
+    - name: resize
+      ignore: false
+      new_size: 256 #! Make sure this matches opt.data.img_size
+    - name: crop
+      ignore: false
+      height: 224
+      width: 224
+    - name: resize # ? this or change generator's output? Or resize larger then crop to 256?
+      ignore: false
+      new_size: 256 #! Make sure this matches opt.data.img_size
+
+# ---------------------
+# ----- Generator -----
+# ---------------------
+gen:
+  opt:
+    optimizer: Adam # one in [Adam, ExtraAdam] default: Adam
+    beta1: 0.9
+    lr: 0.0005
+    lr_policy: step # constant or step ; if step, specify step_size and gamma
+    lr_step_size: 30 # for linear decay : period of learning rate decay (epochs)
+    lr_gamma: 0.5 # Multiplicative factor of learning rate decay
+    init_gain: 0.2
+    init_type: kaiming
+  default:
+    &default-gen # default parameters for the generator (encoder and decoders)
+    activ: lrelu # activation function [relu/lrelu/prelu/selu/tanh]
+    n_res: 4 # number of residual blocks before upsampling
+    n_upsample: 2 # upsampling in spade decoder ; should match encoder.n_downsample
+    pad_type: reflect # padding type [zero/reflect]
+    res_dim: 64 # Resblock number of channels (=latent space's)
+    res_norm: "batch" # normalization to apply
+
+  encoder: # specific params for the encoder
+    <<: *default-gen
+    dim: 16 # dimension of the first projection before downsamplings
+    input_dim: 4 # input number of channels
+    n_downsample: 2 # number of downsampling layers in encoder
+    n_res: 9 # number of residual blocks in content encoder/decoder
+    norm: "batch"
+  decoder:
+    <<: *default-gen
+    output_dim: 1
+    output_activ: "sigmoid"
+    norm: "batch"
+
+# ---------------------
+# ----- Discriminator -----
+# ---------------------
+  
+dis:
+  soft_shift: 0.2 # label smoothing: real in U(1-soft_shift, 1), fake in U(0, soft_shift) # ! one-sided label smoothing
+  flip_prob: 0.05 # label flipping
+  opt:
+    optimizer: Adam # one in [Adam, ExtraAdam] default: Adam
+    beta1: 0.5
+    lr: 0.0005
+    lr_policy: step # constant or step ; if step, specify step_size and gamma
+    lr_step_size: 30 # for linear decay
+    lr_gamma: 0.5
+  default:
+    #&default-dis # default setting for discriminators (there are 4 of them for rn rf sn sf)
+    input_nc: 5
+    ndf: 16
+    n_layers: 5
+    norm: "batch"
+    init_type: kaiming
+    init_gain: 0.2
+    use_sigmoid: false
+    kw: 4
+    padw: 1
+    nf_mult: 1
+    nf_mult_prev: 1
+  feature_DA:
+    n_layers: 3
+
+
+# ------------------------
+# ----- Model options -----
+# ------------------------
+
+model: 
+  model_name: 'sim_mask_depth_generator'
+  is_train: true
+  use_gpu: true
+  lambdas: {}
+  loss_name: 'wgan'
+  verbose: False #print network at start
+
+# ------------------------
+# ----- Comet options ----
+# ------------------------
+
+
+comet: 
+  workspace: "melisandeteng"
+  project_name: "maskgen"
+  exp: None #Will be defined in train.py
+  display_size: 5 #Num images to display
+
+
+# ------------------------
+# ----- Train Params -----
+# ------------------------
+train:
+  epochs: 10000
+  lambdas: # scaling factors in the total loss
+  log_level: 1 # 0: no log, 1: only aggregated losses, >1 detailed losses
+  print_freq: 1
+  output_dir: '/network/home/tengmeli/MaskGen/outputs_depth' #ccai/data/mask_generation/output_files/WD_wgan_feature_pixelDA'
+  save_im_freq: 100
+  save_freq: 20000
+  resume_checkpoint: false
+  load_iter: 500000
+
+
+# -----------------------------
+# ----- Validation Params -----
+# -----------------------------
+val:
+  max_log_images: 1
+  store_images: false # write to disk on top of comet logging
+  save_im_freq: 400
+  overlay: True

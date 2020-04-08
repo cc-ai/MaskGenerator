@@ -14,18 +14,18 @@ import copy
 
 if __name__ == "__main__":
     root = Path(__file__).parent.resolve()
-    opt_file = "shared/feature_pixelDA.yml"
+    opt_file = "shared/feature_pixelDA_depth.yml"
 
     opt = load_opts(path=root / opt_file, default=root / "shared/defaults.yml")
     comet_exp = Experiment(workspace=opt.comet.workspace, project_name=opt.comet.project_name)
-
+    #comet_exp = None
     #! important to do test first
     val_opt = set_mode("test", opt)
-    val_loader = get_loader(val_opt, real=True)
+    val_loader = get_loader(val_opt, real=opt.data.real)
     test_display_images = [Dict(iter(val_loader).next()) for i in range(opt.comet.display_size)]
 
     opt = set_mode("train", opt)
-    loader = get_loader(opt, real=True)
+    loader = get_loader(opt, real=opt.data.real)
     train_display_images = [Dict(iter(loader).next()) for i in range(opt.comet.display_size)]
 
     dataset_size = len(loader)
