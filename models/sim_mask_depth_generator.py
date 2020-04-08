@@ -147,7 +147,7 @@ class SimMaskDepthGenerator(BaseModel):
                 - (self.image[0] * self.fake_mask[0].repeat(3, 1, 1))
                 + self.fake_mask[0].repeat(3, 1, 1)
             )
-            save_depth = model.image_depth[0][3]
+            save_depth =self.image_depth[0][3]
 
             if overlay:
                 save_images.append(save_depth.repeat(3, 1, 1))
@@ -158,5 +158,5 @@ class SimMaskDepthGenerator(BaseModel):
                 save_images.append(save_depth.repeat(3, 1, 1))
                 save_images.append(self.mask[0].repeat(3, 1, 1))
                 save_images.append(self.fake_mask[0].repeat(3, 1, 1))
-        write_images(save_images, curr_iter, comet_exp=self.comet_exp, store_im=self.store_image)
+        write_images(save_images, curr_iter, im_per_row=4, comet_exp=self.comet_exp, store_im=self.store_image)
         return(save_images)
