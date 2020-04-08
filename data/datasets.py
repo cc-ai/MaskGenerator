@@ -226,13 +226,13 @@ def get_loader(opts, real=True):
                 opts, transform=transforms.Compose(get_transforms(Dict(opts)))
             ),
             batch_size=opts.data.loaders.get("batch_size", 4),
-            shuffle=True,
+            shuffle=opts.model.is_train,
             num_workers=opts.data.loaders.get("num_workers", 8),
         )
     else:
         return DataLoader(
             SimDataset(opts, transform=transforms.Compose(get_transforms(Dict(opts)))),
             batch_size=opts.data.loaders.get("batch_size", 4),
-            shuffle=True,
+            shuffle=opts.model.is_train,
             num_workers=opts.data.loaders.get("num_workers", 8),
         )
