@@ -53,13 +53,15 @@ if __name__ == "__main__":
     # ! important to do test first
     val_opt = set_mode("test", opts)
     val_loader = get_loader(val_opt, real=True, no_check=args.no_check)
+    val_iter = iter(val_loader)
     test_display_images = [
-        Dict(iter(val_loader).next()) for i in range(opts.comet.display_size)
+        Dict(val_iter.next()) for i in range(opts.comet.display_size)
     ]
 
     train_loader = get_loader(opts, real=True, no_check=args.no_check)
+    train_iter = iter(train_loader)
     train_display_images = [
-        Dict(iter(train_loader).next()) for i in range(opts.comet.display_size)
+        Dict(train_iter.next()) for i in range(opts.comet.display_size)
     ]
 
     print("Loaders created. Creating network:")
