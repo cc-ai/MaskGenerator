@@ -41,13 +41,8 @@ class SimDataset(Dataset):
         """Checks that every file listed in samples_paths actually
         exist on the file-system
         """
-        print(
-            "Cheking {} samples in {}...".format(
-                len(self.samples_paths), self.file_list_path
-            ),
-            end="",
-            flush=True,
-        )
+        l, p = (len(self.samples_paths), self.file_list_path)
+        print(f"Cheking {l} samples in {p}...", end="", flush=True)
         for s in self.samples_paths:
             for k, v in s.items():
                 assert Path(v).exists(), f"{k} {v} does not exist"
