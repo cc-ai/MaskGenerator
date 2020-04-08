@@ -65,23 +65,23 @@ class MaskGenerator(BaseModel):
 
             self.optimizer_G = torch.optim.Adam(
                 itertools.chain(self.netG.parameters()),
-                lr=opts.gen.opts.lr,
-                betas=(opts.gen.opts.beta1, 0.999),
+                lr=opts.gen.optim.lr,
+                betas=(opts.gen.optim.beta1, 0.999),
             )
             self.optimizer_D = torch.optim.Adam(
                 itertools.chain(self.netD.parameters()),
-                lr=opts.dis.opts.lr,
-                betas=(opts.dis.opts.beta1, 0.999),
+                lr=opts.dis.optim.lr,
+                betas=(opts.dis.optim.beta1, 0.999),
             )
             self.optimizer_D_F = torch.optim.Adam(
                 itertools.chain(self.netD_F.parameters()),
-                lr=opts.dis.opts.lr,
-                betas=(opts.dis.opts.beta1, 0.999),
+                lr=opts.dis.optim.lr,
+                betas=(opts.dis.optim.beta1, 0.999),
             )
             self.optimizer_D_P = torch.optim.Adam(
                 itertools.chain(self.netD_P.parameters()),
-                lr=opts.dis.opts.lr,
-                betas=(opts.dis.opts.beta1, 0.999),
+                lr=opts.dis.optim.lr,
+                betas=(opts.dis.optim.beta1, 0.999),
             )
             self.optimizers = []
             self.optimizers.append(self.optimizer_G)

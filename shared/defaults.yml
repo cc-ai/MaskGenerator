@@ -32,7 +32,7 @@ data:
 # ----- Generator -----
 # ---------------------
 gen:
-  opt:
+  optim:
     optimizer: ExtraAdam # one in [Adam, ExtraAdam] default: Adam
     beta1: 0.9
     lr: 0.0005
@@ -70,7 +70,7 @@ gen:
 dis:
   soft_shift: 0.2 # label smoothing: real in U(1-soft_shift, 1), fake in U(0, soft_shift) # ! one-sided label smoothing
   flip_prob: 0.05 # label flipping
-  opt:
+  optim:
     optimizer: Adam # one in [Adam, ExtraAdam] default: Adam
     beta1: 0.5
     lr: 0.0005
