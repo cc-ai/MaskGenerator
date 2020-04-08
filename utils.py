@@ -9,6 +9,7 @@ import time
 import torchvision.utils as vutils
 from torch.optim import lr_scheduler
 import numpy as np
+from copy import deepcopy
 
 
 def load_opts(path=None, default=None):
@@ -57,12 +58,11 @@ def set_data_paths(opts):
 
 
 def set_mode(mode, opts):
-    opts = opts.copy()
+    opts = deepcopy(opts)
     if mode == "train":
         opts.model.is_train = True
     elif mode == "test":
         opts.model.is_train = False
-
     return opts
 
 
@@ -159,14 +159,60 @@ def write_images(
         comet_exp.log_image(image_grid, name="test_iter_" + str(curr_iter))
 
 
-def avg_duration(times):
+def avg_duration(times, batch_size=1):
     """Given a list of times, return the average duration (i.e. difference of times)
+    of processing 1 single sample (therefore / batch_size)
 
     Args:
-        times ([type]): [description]
+        times (iterable): Iterable containing the absolute time
 
     Returns:
-        [type]: [description]
+        float: Average duration per sample
     """
     t = list(times)
-    return (np.array(t + [0]) - np.array([0] + t))[1:-1].mean()
+    return (np.array(t + [0]) - np.array([0] + t))[1:-1].mean() / batch_size
+
+
+def flatten_opts(opts):
+    """Flattens a multi-level addict.Dict or native dictionnary into a single
+    level native dict with string keys representing the keys sequence to reach
+    a value in the original argument.
+
+    d = addict.Dict()
+    d.a.b.c = 2
+    d.a.b.d = 3
+    d.a.e = 4
+    d.f = 5
+    flatten_opts(d)
+    >>> {
+        "a.b.c": 2,
+        "a.b.d": 3,
+        "a.e": 4,
+        "f": 5,
+    }
+
+    Args:
+        opts (addict.Dict or dict): addict dictionnary to flatten
+
+    Returns:
+        dict: flattened dictionnary
+    """
+    values_list = []
+
+    def p(d, prefix="", vals=[]):
+        for k, v in d.items():
+            if isinstance(v, (Dict, dict)):
+                p(v, prefix + k + ".", vals)
+            elif isinstance(v, list):
+                if v and isinstance(v[0], (Dict, dict)):
+                    for i, m in enumerate(v):
+                        p(m, prefix + k + "." + str(i) + ".", vals)
+                else:
+                    vals.append((prefix + k, str(v)))
+            else:
+                if isinstance(v, Path):
+                    v = str(v)
+                vals.append((prefix + k, v))
+
+    p(opts, vals=values_list)
+    return dict(values_list)
