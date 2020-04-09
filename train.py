@@ -17,8 +17,12 @@ from collections import deque
 import argparse
 from models.mask_generator import MaskGenerator
 
+
 if __name__ == "__main__":
 
+    # --------------------------
+    # -----  Load Options  -----
+    # --------------------------
     root = Path(__file__).parent.resolve()
     opt_file = "shared/feature_pixelDA.yml"
     opts = load_opts(path=root / opt_file, default=root / "shared/defaults.yml")
@@ -26,6 +30,9 @@ if __name__ == "__main__":
     flats = flatten_opts(opts)
     print_opts(flats)
 
+    # -----------------------------
+    # -----  Parse Arguments  -----
+    # -----------------------------
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-w", "--workspace", default=opts.comet.workspace, help="Comet Workspace"
@@ -45,10 +52,16 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    # ------------------------------------
+    # -----  Start Comet Experiment  -----
+    # ------------------------------------
     comet_exp = Experiment(workspace=args.workspace, project_name=args.project_name)
     comet_exp.log_asset(file_data=str(root / opt_file), file_name=root / opt_file)
     comet_exp.log_parameters(flats)
 
+    # ----------------------------
+    # -----  Create loaders  -----
+    # ----------------------------
     print("Creating loaders:")
     # ! important to do test first
     val_opt = set_mode("test", opts)
@@ -64,22 +77,37 @@ if __name__ == "__main__":
         Dict(train_iter.next()) for i in range(opts.comet.display_size)
     ]
 
+    # --------------------------
+    # -----  Create Model  -----
+    # --------------------------
     print("Loaders created. Creating network:")
-
     opts.comet.exp = comet_exp
     model: MaskGenerator = create_model(opts)
     model.setup()
 
+    # ---------------------------
+    # -----  Miscellaneous  -----
+    # ---------------------------
     total_steps = 0
     times = deque([0], maxlen=100)
     model_times = deque([0], maxlen=100)
     batch_size = opts.data.loaders.batch_size
-    time_str = "Average time per sample at step {} ({}): {:.3f} (model only: {:.3f})"
     checkpoint_directory, image_directory = prepare_sub_folder(opts.train.output_dir)
+    tpe = opts.train.tests_per_epoch
+    test_idx = [i * len(train_iter) // tpe for i in range(tpe)]
+    test_idx[-1] = len(train_iter) - 1
+    test_idx = set(test_idx)
 
-    print(">>> Starting training <<<")
+    # ---------------------------
+    # -----  Training Loop  -----
+    # ---------------------------
+    s = "Starting training for {} epochs of {} updates with batch size {}, "
+    s += "{} test inferences per epoch."
+    print(s.format(opts.train.epochs, len(train_iter), batch_size, tpe))
 
     for epoch in range(opts.train.epochs):
+        print(f"Epoch {epoch}: ")
+        comet_exp.log_metric("epoch", epoch, step=total_steps)
         for i, data in enumerate(train_loader):
             times.append(time())
             total_steps += batch_size
@@ -88,24 +116,15 @@ if __name__ == "__main__":
             model.optimize_parameters()
 
             model_times.append(time() - times[-1])
-
             if total_steps // batch_size % 100 == 0:
                 avg = avg_duration(times, batch_size)
-                print(
-                    time_str.format(
-                        total_steps, epoch, avg, np.mean(model_times) / batch_size
-                    )
-                )
-                model.comet_exp.log_metric("sample_time", avg, step=total_steps)
-
-            if total_steps % opts.val.save_im_freq == 0:
+                mod_times = np.mean(model_times) / batch_size
+                comet_exp.log_metric("sample_time", avg, step=total_steps)
+                comet_exp.log_metric("model_time", mod_times, step=total_steps)
+            if i in test_idx:
                 model.save_test_images(test_display_images, total_steps)
 
-            if total_steps % opts.train.save_freq == 0:
-                print(
-                    "saving the latest model (epoch %d, total_steps %d)"
-                    % (epoch, total_steps)
-                )
-                save_suffix = "iter_%d" % total_steps
-                model.save_networks(save_suffix)
+        print("saving (epoch %d, total_steps %d)" % (epoch, total_steps))
+        save_suffix = "iter_%d" % total_steps
+        model.save_networks(save_suffix)
         # model.update_learning_rate()
