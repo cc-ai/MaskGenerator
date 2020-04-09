@@ -51,13 +51,14 @@ def get_norm_layer(norm_type="instance"):
     if norm_type == "batch":
         norm_layer = functools.partial(nn.BatchNorm2d, affine=True)
     elif norm_type == "instance":
-        norm_layer = functools.partial(nn.InstanceNorm2d, affine=False, track_running_stats=False)
+        norm_layer = functools.partial(
+            nn.InstanceNorm2d, affine=False, track_running_stats=False
+        )
     elif norm_type == "none":
         norm_layer = None
     else:
         raise NotImplementedError("normalization layer [%s] is not found" % norm_type)
     return norm_layer
-
 
 
 def calc_gradient_penalty(opt, netD, real_data, fake_data):
@@ -175,7 +176,15 @@ def define_D(opts):
     net = None
 
     net = NLayerDiscriminator(
-        input_nc, ndf, n_layers, norm_layer, use_sigmoid, kw, padw, nf_mult, nf_mult_prev
+        input_nc,
+        ndf,
+        n_layers,
+        norm_layer,
+        use_sigmoid,
+        kw,
+        padw,
+        nf_mult,
+        nf_mult_prev,
     )
 
     init_weights(net, init_type, init_gain)
@@ -205,13 +214,11 @@ class Generator(nn.Module):
     ):
         super(Generator, self).__init__()
         # --------------------ENCODER----------------------------
-        self.encoder = [
-            Conv2dBlock(input_dim, dim, 7, 1, 3),
-        ]
+        self.encoder = [Conv2dBlock(input_dim, dim, 7, 1, 3)]
 
         for i in range(n_downsample):
             self.encoder += [
-                Conv2dBlock(dim, 2 * dim, 4, 2, 1, norm=enc_norm, activation=activ),
+                Conv2dBlock(dim, 2 * dim, 4, 2, 1, norm=enc_norm, activation=activ)
             ]
             dim = 2 * dim
 
@@ -222,7 +229,9 @@ class Generator(nn.Module):
         self.decoder = []
         for i in range(n_downsample):
             self.decoder += [
-                ConvTranspose2dBlock(dim, int(dim / 2), 2, 2, 0, norm=dec_norm, activation=activ)
+                ConvTranspose2dBlock(
+                    dim, int(dim / 2), 2, 2, 0, norm=dec_norm, activation=activ
+                )
             ]
             dim = int(dim / 2)
         self.decoder += [Conv2dBlock(dim, output_dim, 3, 1, 1, activation=output_activ)]
@@ -249,7 +258,16 @@ class Generator(nn.Module):
 # Defines the PatchGAN discriminator with the specified arguments.
 class NLayerDiscriminator(nn.Module):
     def __init__(
-        self, input_nc, ndf, n_layers, norm_layer, use_sigmoid, kw, padw, nf_mult, nf_mult_prev,
+        self,
+        input_nc,
+        ndf,
+        n_layers,
+        norm_layer,
+        use_sigmoid,
+        kw,
+        padw,
+        nf_mult,
+        nf_mult_prev,
     ):
         super(NLayerDiscriminator, self).__init__()
 
@@ -260,7 +278,9 @@ class NLayerDiscriminator(nn.Module):
 
         sequence = [
             # Use spectral normalization
-            SpectralNorm(nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw)),
+            SpectralNorm(
+                nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw)
+            ),
             nn.LeakyReLU(0.2, True),
         ]
 
@@ -303,7 +323,9 @@ class NLayerDiscriminator(nn.Module):
 
         # Use spectral normalization
         sequence += [
-            SpectralNorm(nn.Conv2d(ndf * nf_mult, 1, kernel_size=kw, stride=1, padding=padw))
+            SpectralNorm(
+                nn.Conv2d(ndf * nf_mult, 1, kernel_size=kw, stride=1, padding=padw)
+            )
         ]
 
         if use_sigmoid:
