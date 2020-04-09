@@ -159,7 +159,7 @@ class RealSimDataset(Dataset):
         exist on the file-system
         """
         l, p = (len(self.samples_paths), self.file_list_path)
-        print(f"Cheking {l} samples in {p}...", end="", flush=True)
+        print(f"Checking {l} samples in {p}...", end="", flush=True)
 
         for s in self.samples_paths:
             for k, v in s.items():
