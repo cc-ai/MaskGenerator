@@ -119,7 +119,7 @@ if __name__ == "__main__":
                 comet_exp.log_metric("sample_time", avg, step=total_steps)
                 comet_exp.log_metric("model_time", mod_times, step=total_steps)
             if i in test_idx or total_steps == batch_size:
-                print("Inferring test display images...", end="", flush=True)
+                print(f"({total_steps}) Inferring test images...", end="", flush=True)
                 t = model.save_test_images(test_display_images, total_steps)
                 print("ok in {:.2f}s.".format(t))
 
