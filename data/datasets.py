@@ -168,7 +168,7 @@ class RealSimDataset(Dataset):
         print(" ok.")
 
         l, p = (len(self.real_samples_paths), self.real_file_list_path)
-        print(f"Cheking {l} samples in {p}...", end="", flush=True)
+        print(f"Checking {l} samples in {p}...", end="", flush=True)
 
         for s in self.real_samples_paths:
             for k, v in s.items():
