@@ -127,9 +127,13 @@ class MaskGenerator(BaseModel):
 
         # Log D loss to comet:
         if self.comet_exp is not None:
-            self.comet_exp.log_metric("loss D", self.loss_D.cpu().detach())
-            self.comet_exp.log_metric("loss D real", self.loss_D_real.cpu().detach())
-            self.comet_exp.log_metric("loss D fake", self.loss_D_fake.cpu().detach())
+            self.comet_exp.log_metrics(
+                {
+                    "loss D": self.loss_D.cpu().detach(),
+                    "loss D real": self.loss_D_real.cpu().detach(),
+                    "loss D fake": self.loss_D_fake.cpu().detach(),
+                }
+            )
 
         # backward
         self.loss_D.backward()
@@ -152,12 +156,12 @@ class MaskGenerator(BaseModel):
 
         # Log D loss to comet:
         if self.comet_exp is not None:
-            self.comet_exp.log_metric("loss D Pixel DA", self.loss_D_P.cpu().detach())
-            self.comet_exp.log_metric(
-                "loss D Pixel DA sim", self.loss_D_P_sim.cpu().detach()
-            )
-            self.comet_exp.log_metric(
-                "loss D Pixel DA real", self.loss_D_P_real.cpu().detach()
+            self.comet_exp.log_metrics(
+                {
+                    "loss D Pixel DA": self.loss_D_P.cpu().detach(),
+                    "loss D Pixel DA sim": self.loss_D_P_sim.cpu().detach(),
+                    "loss D Pixel DA real": self.loss_D_P_real.cpu().detach(),
+                }
             )
 
         # backward
@@ -181,12 +185,12 @@ class MaskGenerator(BaseModel):
 
         # Log D loss to comet:
         if self.comet_exp is not None:
-            self.comet_exp.log_metric("loss D Feature DA", self.loss_D_F.cpu().detach())
-            self.comet_exp.log_metric(
-                "loss D Feature DA sim", self.loss_D_F_sim.cpu().detach()
-            )
-            self.comet_exp.log_metric(
-                "loss D Feature DA real", self.loss_D_F_real.cpu().detach()
+            self.comet_exp.log_metrics(
+                {
+                    "loss D Feature DA": self.loss_D_F.cpu().detach(),
+                    "loss D Feature DA sim": self.loss_D_F_sim.cpu().detach(),
+                    "loss D Feature DA real": self.loss_D_F_real.cpu().detach(),
+                }
             )
 
         # backward
@@ -210,16 +214,15 @@ class MaskGenerator(BaseModel):
         self.loss_G = self.loss_G_standard + (self.loss_G_DA_F + self.loss_G_DA_P) * 0.5
         # Log G loss to comet:
         if self.comet_exp is not None:
-            self.comet_exp.log_metric("loss G", self.loss_G.cpu().detach())
-            self.comet_exp.log_metric(
-                "loss G standard", self.loss_G_standard.cpu().detach()
+            self.comet_exp.log_metrics(
+                {
+                    "loss G": self.loss_G.cpu().detach(),
+                    "loss G standard": self.loss_G_standard.cpu().detach(),
+                    "loss G Feature DA": self.loss_G_DA_F.cpu().detach(),
+                    "loss G Pixel DA": self.loss_G_DA_P.cpu().detach(),
+                }
             )
-            self.comet_exp.log_metric(
-                "loss G Feature DA", self.loss_G_DA_F.cpu().detach()
-            )
-            self.comet_exp.log_metric(
-                "loss G Pixel DA", self.loss_G_DA_P.cpu().detach()
-            )
+
         self.loss_G.backward()
 
     def optimize_parameters(self):
