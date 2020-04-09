@@ -13,17 +13,17 @@ class BaseModel:
     def name(self):
         return "BaseModel"
 
-    def initialize(self, opt):
-        self.opt = opt
-        self.use_gpu = opt.model.use_gpu
+    def initialize(self, opts):
+        self.opts = opts
+        self.use_gpu = opts.model.use_gpu
         self.device = torch.device(
-            "cuda" if (torch.cuda.is_available() and opt.model.use_gpu) else "cpu"
+            "cuda" if (torch.cuda.is_available() and opts.model.use_gpu) else "cpu"
         )
-        self.isTrain = opt.model.is_train
+        self.isTrain = opts.model.is_train
         self.loss_names = []
         self.model_names = []
-        self.comet_exp = opt.comet_exp
-        self.save_dir = opt.train.output_dir + "/checkpoints"
+        self.comet_exp = opts.comet_exp
+        self.save_dir = opts.train.output_dir + "/checkpoints"
 
     def set_input(self, input):
         pass
@@ -38,13 +38,13 @@ class BaseModel:
     def setup(self):
         # TODO Resume training
 
-        if not self.isTrain or self.opt.train.resume_checkpoint:
-            load_suffix = "iter_%d" % self.opt.train.load_iter
+        if not self.isTrain or self.opts.train.resume_checkpoint:
+            load_suffix = "iter_%d" % self.opts.train.load_iter
             self.load_networks(load_suffix)
         if not self.isTrain:
             self.eval()
 
-        self.print_networks(self.opt.model.verbose)
+        self.print_networks(self.opts.model.verbose)
 
     # make models eval mode during test time
     def eval(self):
@@ -141,7 +141,7 @@ class BaseModel:
                 )
         print("-----------------------------------------------")
 
-    # set requies_grad=Fasle to avoid computation
+    # set requires_grad=False to avoid computation
     def set_requires_grad(self, nets, requires_grad=False):
         if not isinstance(nets, list):
             nets = [nets]

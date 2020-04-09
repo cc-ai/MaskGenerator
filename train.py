@@ -1,77 +1,129 @@
 from comet_ml import Experiment
-import time
+from time import time
 from pathlib import Path
 from addict import Dict
-from utils import load_opts, set_mode, prepare_sub_folder, create_model, Timer
+import numpy as np
+from utils import (
+    load_opts,
+    set_mode,
+    prepare_sub_folder,
+    create_model,
+    avg_duration,
+    flatten_opts,
+    print_opts,
+)
 from data.datasets import get_loader
+from collections import deque
+import argparse
+from models.mask_generator import MaskGenerator
 
-# from data import CreateDataLoader
-# from models import create_model
-# from util.visualizer import Visualizer
 
 if __name__ == "__main__":
+
+    # --------------------------
+    # -----  Load Options  -----
+    # --------------------------
     root = Path(__file__).parent.resolve()
     opt_file = "shared/feature_pixelDA.yml"
+    opts = load_opts(path=root / opt_file, default=root / "shared/defaults.yml")
+    opts = set_mode("train", opts)
+    flats = flatten_opts(opts)
+    print_opts(flats)
 
-    opt = load_opts(path=root / opt_file, default=root / "shared/defaults.yml")
-    comet_exp = Experiment(
-        workspace=opt.comet.workspace, project_name=opt.comet.project_name
+    # -----------------------------
+    # -----  Parse Arguments  -----
+    # -----------------------------
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-w", "--workspace", default=opts.comet.workspace, help="Comet Workspace"
     )
+    parser.add_argument(
+        "-p",
+        "--project_name",
+        default=opts.comet.project_name,
+        help="Comet project_name",
+    )
+    parser.add_argument(
+        "-n",
+        "--no_check",
+        action="store_true",
+        default=False,
+        help="Prevent sample existence checking for faster dev",
+    )
+    args = parser.parse_args()
 
-    #! important to do test first
-    val_opt = set_mode("test", opt)
-    val_loader = get_loader(val_opt, real=True)
+    # ------------------------------------
+    # -----  Start Comet Experiment  -----
+    # ------------------------------------
+    comet_exp = Experiment(workspace=args.workspace, project_name=args.project_name)
+    comet_exp.log_asset(file_data=str(root / opt_file), file_name=root / opt_file)
+    comet_exp.log_parameters(flats)
+
+    # ----------------------------
+    # -----  Create loaders  -----
+    # ----------------------------
+    print("Creating loaders:")
+    # ! important to do test first
+    val_opt = set_mode("test", opts)
+    val_loader = get_loader(val_opt, real=True, no_check=args.no_check)
+    train_loader = get_loader(opts, real=True, no_check=args.no_check)
+    print("Creating display images...", end="", flush=True)
+    val_iter = iter(val_loader)
     test_display_images = [
-        Dict(iter(val_loader).next()) for i in range(opt.comet.display_size)
+        Dict(val_iter.next()) for i in range(opts.comet.display_size)
     ]
+    print("ok.")
 
-    opt = set_mode("train", opt)
-    loader = get_loader(opt, real=True)
-    train_display_images = [
-        Dict(iter(loader).next()) for i in range(opt.comet.display_size)
-    ]
-
-    dataset_size = len(loader)
-    print("#training images = %d" % dataset_size)
-
-    if comet_exp is not None:
-        comet_exp.log_asset(file_data=str(root / opt_file), file_name=root / opt_file)
-        comet_exp.log_parameters(opt)
-
-    checkpoint_directory, image_directory = prepare_sub_folder(opt.train.output_dir)
-
-    opt.comet.exp = comet_exp
-
-    model = create_model(opt)
+    # --------------------------
+    # -----  Create Model  -----
+    # --------------------------
+    print("Creating Model:")
+    opts.comet.exp = comet_exp
+    model: MaskGenerator = create_model(opts)
     model.setup()
 
+    # ---------------------------
+    # -----  Miscellaneous  -----
+    # ---------------------------
     total_steps = 0
+    times = deque([0], maxlen=100)
+    model_times = deque([0], maxlen=100)
+    batch_size = opts.data.loaders.batch_size
+    checkpoint_directory, image_directory = prepare_sub_folder(opts.train.output_dir)
+    tpe = opts.train.tests_per_epoch
+    test_idx = [i * len(train_loader) // tpe for i in range(tpe)]
+    test_idx[-1] = len(train_loader) - 1
+    test_idx = set(test_idx)
 
-    for epoch in range(opt.train.epochs):
-        epoch_start_time = time.time()
-        iter_data_time = time.time()
-        epoch_iter = 0
+    # ---------------------------
+    # -----  Training Loop  -----
+    # ---------------------------
+    s = "Starting training for {} epochs of {} updates with batch size {}, "
+    s += "{} test inferences per epoch."
+    print(s.format(opts.train.epochs, len(train_loader), batch_size, tpe))
 
-        for i, data in enumerate(loader):
-            with Timer("Elapsed time in update " + str(i) + ": %f"):
-                iter_start_time = time.time()
-                if total_steps % opt.train.print_freq == 0:
-                    t_data = iter_start_time - iter_data_time
-                total_steps += opt.data.loaders.batch_size
-                epoch_iter += opt.data.loaders.batch_size
+    for epoch in range(opts.train.epochs):
+        print(f"Epoch {epoch}: ")
+        comet_exp.log_metric("epoch", epoch, step=total_steps)
+        for i, data in enumerate(train_loader):
+            times.append(time())
+            total_steps += batch_size
 
-                model.set_input(Dict(data))
-                model.optimize_parameters()
+            model.set_input(Dict(data))
+            model.optimize_parameters(total_steps)
 
-                if total_steps % opt.val.save_im_freq == 0:
-                    model.save_test_images(test_display_images, total_steps)
+            model_times.append(time() - times[-1])
+            if total_steps // batch_size % 100 == 0:
+                avg = avg_duration(times, batch_size)
+                mod_times = np.mean(model_times) / batch_size
+                comet_exp.log_metric("sample_time", avg, step=total_steps)
+                comet_exp.log_metric("model_time", mod_times, step=total_steps)
+            if i in test_idx or total_steps == batch_size:
+                print(f"({total_steps}) Inferring test images...", end="", flush=True)
+                t = model.save_test_images(test_display_images, total_steps)
+                print("ok in {:.2f}s.".format(t))
 
-                if total_steps % opt.train.save_freq == 0:
-                    print(
-                        "saving the latest model (epoch %d, total_steps %d)"
-                        % (epoch, total_steps)
-                    )
-                    save_suffix = "iter_%d" % total_steps
-                    model.save_networks(save_suffix)
-
-                iter_data_time = time.time()
+        print("saving (epoch %d, total_steps %d)" % (epoch, total_steps))
+        save_suffix = "iter_%d" % total_steps
+        model.save_networks(save_suffix)
+        # model.update_learning_rate()

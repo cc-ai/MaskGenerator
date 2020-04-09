@@ -1,7 +1,6 @@
-
+--- # ----------------
 # ----------------
 # ----- Data -----
-# ----------------
 data:
   files: # if one is not none it will override the dirs location
     base: "/network/tmp1/ccai/data/mask_generation/1000R"
@@ -19,20 +18,20 @@ data:
       p: 0.5
     - name: resize
       ignore: false
-      new_size: 256 #! Make sure this matches opt.data.img_size
+      new_size: 256 #! Make sure this matches opts.data.img_size
     - name: crop
       ignore: false
       height: 224
       width: 224
     - name: resize # ? this or change generator's output? Or resize larger then crop to 256?
       ignore: false
-      new_size: 256 #! Make sure this matches opt.data.img_size
+      new_size: 256 #! Make sure this matches opts.data.img_size
 
 # ---------------------
 # ----- Generator -----
 # ---------------------
 gen:
-  opt:
+  optim:
     optimizer: Adam # one in [Adam, ExtraAdam] default: Adam
     beta1: 0.9
     lr: 0.0005
@@ -66,11 +65,11 @@ gen:
 # ---------------------
 # ----- Generator -----
 # ---------------------
-  
+
 dis:
   soft_shift: 0.2 # label smoothing: real in U(1-soft_shift, 1), fake in U(0, soft_shift) # ! one-sided label smoothing
   flip_prob: 0.05 # label flipping
-  opt:
+  optim:
     optimizer: Adam # one in [Adam, ExtraAdam] default: Adam
     beta1: 0.5
     lr: 0.0005
@@ -95,25 +94,23 @@ dis:
 # ----- Model options -----
 # ------------------------
 
-model: 
-  model_name: 'mask_generator'
+model:
+  model_name: "mask_generator"
   is_train: true
   use_gpu: true
   lambdas: {}
-  loss_name: 'wgan'
+  loss_name: "wgan"
   verbose: False #print network at start
 
 # ------------------------
 # ----- Comet options ----
 # ------------------------
 
-
-comet: 
+comet:
   workspace: "sunandr"
   project_name: "mask-generator"
   exp: None #Will be defined in train.py
   display_size: 5 #Num images to display
-
 
 # ------------------------
 # ----- Train Params -----
@@ -123,12 +120,11 @@ train:
   lambdas: # scaling factors in the total loss
   log_level: 1 # 0: no log, 1: only aggregated losses, >1 detailed losses
   print_freq: 1
-  output_dir: './outputs'
+  output_dir: "./outputs"
   save_im_freq: 100
   save_freq: 20000
   resume_checkpoint: false
   load_iter: 500000
-
 
 # -----------------------------
 # ----- Validation Params -----
