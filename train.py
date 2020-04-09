@@ -1,8 +1,6 @@
 import time
 from pathlib import Path
 from comet_ml import Experiment
-
-
 import sys
 from utils import *
 from data.datasets import get_loader
