@@ -59,9 +59,6 @@ def get_norm_layer(norm_type="instance"):
     return norm_layer
 
 
-# def WassersteinLoss(input, target_tensor):
-#    #Use 0.5 threshold to determine whether real or fake
-
 
 def calc_gradient_penalty(opt, netD, real_data, fake_data):
     DIM = opt.data.img_size
