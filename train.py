@@ -66,21 +66,18 @@ if __name__ == "__main__":
     # ! important to do test first
     val_opt = set_mode("test", opts)
     val_loader = get_loader(val_opt, real=True, no_check=args.no_check)
+    train_loader = get_loader(opts, real=True, no_check=args.no_check)
+    print("Creating display images...", end="", flush=True)
     val_iter = iter(val_loader)
     test_display_images = [
         Dict(val_iter.next()) for i in range(opts.comet.display_size)
     ]
-
-    train_loader = get_loader(opts, real=True, no_check=args.no_check)
-    train_iter = iter(train_loader)
-    train_display_images = [
-        Dict(train_iter.next()) for i in range(opts.comet.display_size)
-    ]
+    print("ok.")
 
     # --------------------------
     # -----  Create Model  -----
     # --------------------------
-    print("Loaders created. Creating network:")
+    print("Creating Model:")
     opts.comet.exp = comet_exp
     model: MaskGenerator = create_model(opts)
     model.setup()
@@ -94,8 +91,8 @@ if __name__ == "__main__":
     batch_size = opts.data.loaders.batch_size
     checkpoint_directory, image_directory = prepare_sub_folder(opts.train.output_dir)
     tpe = opts.train.tests_per_epoch
-    test_idx = [i * len(train_iter) // tpe for i in range(tpe)]
-    test_idx[-1] = len(train_iter) - 1
+    test_idx = [i * len(train_loader) // tpe for i in range(tpe)]
+    test_idx[-1] = len(train_loader) - 1
     test_idx = set(test_idx)
 
     # ---------------------------
@@ -103,7 +100,7 @@ if __name__ == "__main__":
     # ---------------------------
     s = "Starting training for {} epochs of {} updates with batch size {}, "
     s += "{} test inferences per epoch."
-    print(s.format(opts.train.epochs, len(train_iter), batch_size, tpe))
+    print(s.format(opts.train.epochs, len(train_loader), batch_size, tpe))
 
     for epoch in range(opts.train.epochs):
         print(f"Epoch {epoch}: ")
@@ -121,7 +118,7 @@ if __name__ == "__main__":
                 mod_times = np.mean(model_times) / batch_size
                 comet_exp.log_metric("sample_time", avg, step=total_steps)
                 comet_exp.log_metric("model_time", mod_times, step=total_steps)
-            if i in test_idx:
+            if i in test_idx or total_steps == batch_size:
                 model.save_test_images(test_display_images, total_steps)
 
         print("saving (epoch %d, total_steps %d)" % (epoch, total_steps))
