@@ -40,6 +40,7 @@ if __name__ == "__main__":
     total_steps = 0
 
     for i, data in enumerate(val_loader):
+        #
         with Timer("Elapsed time in update " + str(i) + ": %f"):
             total_steps += opts.data.loaders.batch_size
             model.set_input(Dict(data))
