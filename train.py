@@ -110,7 +110,7 @@ if __name__ == "__main__":
             total_steps += batch_size
 
             model.set_input(Dict(data))
-            model.optimize_parameters()
+            model.optimize_parameters(total_steps)
 
             model_times.append(time() - times[-1])
             if total_steps // batch_size % 100 == 0:

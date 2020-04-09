@@ -104,7 +104,7 @@ class MaskGenerator(BaseModel):
         self.sim_latent_vec, self.fake_mask = self.netG(self.image)
         self.real_latent_vec, self.r_fake_mask = self.netG(self.r_im)
 
-    def backward_D(self):
+    def backward_D(self, steps=0):
         # Real
 
         real_mask_d = torch.cat([self.image, self.mask], dim=1)
@@ -132,13 +132,14 @@ class MaskGenerator(BaseModel):
                     "loss D": self.loss_D.cpu().detach(),
                     "loss D real": self.loss_D_real.cpu().detach(),
                     "loss D fake": self.loss_D_fake.cpu().detach(),
-                }
+                },
+                step=steps,
             )
 
         # backward
         self.loss_D.backward()
 
-    def backward_D_P(self):
+    def backward_D_P(self, steps=0):
         # Real (sim)
         pred_domain_sim = self.netD_P(self.mask)
         self.loss_D_P_sim = self.criterionGAN(pred_domain_sim, True)
@@ -161,13 +162,14 @@ class MaskGenerator(BaseModel):
                     "loss D Pixel DA": self.loss_D_P.cpu().detach(),
                     "loss D Pixel DA sim": self.loss_D_P_sim.cpu().detach(),
                     "loss D Pixel DA real": self.loss_D_P_real.cpu().detach(),
-                }
+                },
+                step=steps,
             )
 
         # backward
         self.loss_D_P.backward()
 
-    def backward_D_F(self):
+    def backward_D_F(self, steps=0):
         # Feature Domain adaptation
         # Treat sim as "True" and real as "False"
         pred_domain_sim = self.netD_F(self.sim_latent_vec.detach())
@@ -190,13 +192,14 @@ class MaskGenerator(BaseModel):
                     "loss D Feature DA": self.loss_D_F.cpu().detach(),
                     "loss D Feature DA sim": self.loss_D_F_sim.cpu().detach(),
                     "loss D Feature DA real": self.loss_D_F_real.cpu().detach(),
-                }
+                },
+                step=steps,
             )
 
         # backward
         self.loss_D_F.backward()
 
-    def backward_G(self):
+    def backward_G(self, steps=0):
         # Standard G loss
         self.loss_G_standard = self.criterionGAN(
             self.netD(torch.cat([self.image, self.fake_mask], dim=1)), True
@@ -220,12 +223,13 @@ class MaskGenerator(BaseModel):
                     "loss G standard": self.loss_G_standard.cpu().detach(),
                     "loss G Feature DA": self.loss_G_DA_F.cpu().detach(),
                     "loss G Pixel DA": self.loss_G_DA_P.cpu().detach(),
-                }
+                },
+                step=steps,
             )
 
         self.loss_G.backward()
 
-    def optimize_parameters(self):
+    def optimize_parameters(self, steps=0):
         # forward
         self.forward()
 
@@ -234,25 +238,25 @@ class MaskGenerator(BaseModel):
         self.set_requires_grad(self.netD_F, False)
         self.set_requires_grad(self.netD_P, False)
         self.optimizer_G.zero_grad()
-        self.backward_G()
+        self.backward_G(steps)
         self.optimizer_G.step()
 
         # D
         self.set_requires_grad(self.netD, True)
         self.optimizer_D.zero_grad()
-        self.backward_D()
+        self.backward_D(steps)
         self.optimizer_D.step()
 
         # D Feature - Domain adaptation
         self.set_requires_grad(self.netD_F, True)
         self.optimizer_D_F.zero_grad()
-        self.backward_D_F()
+        self.backward_D_F(steps)
         self.optimizer_D_F.step()
 
         # D Pixel - Domain adaptation
         self.set_requires_grad(self.netD_P, True)
         self.optimizer_D_P.zero_grad()
-        self.backward_D_P()
+        self.backward_D_P(steps)
         self.optimizer_D_P.step()
 
     def save_test_images(self, test_display_data, curr_iter):
