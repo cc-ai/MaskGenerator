@@ -47,6 +47,10 @@ if __name__ == "__main__":
 
     total_steps = 0
 
+
+
+
+
     for epoch in range(opt.train.epochs):
         epoch_start_time = time.time()
         iter_data_time = time.time()
