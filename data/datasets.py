@@ -33,7 +33,6 @@ class SimDataset(Dataset):
         self.file_list_path = str(file_list_path)
         if not no_check:
             self.check_samples()
-        self.check_samples()
         self.transform = transform
         self.opts = opts
 
@@ -42,7 +41,7 @@ class SimDataset(Dataset):
         exist on the file-system
         """
         l, p = (len(self.samples_paths), self.file_list_path)
-        print(f"Cheking {l} samples in {p}...", end="", flush=True)
+        print(f"Checking {l} samples in {p}...", end="", flush=True)
         for s in self.samples_paths:
             for k, v in s.items():
                 assert Path(v).exists(), f"{k} {v} does not exist"
