@@ -3,7 +3,7 @@ import itertools
 from .base_model import BaseModel
 from . import networks
 from utils import write_images
-
+from time import time
 
 # Domain adaptation for real data
 class MaskGenerator(BaseModel):
@@ -253,6 +253,7 @@ class MaskGenerator(BaseModel):
         self.optimizer_D_P.step()
 
     def save_test_images(self, test_display_data, curr_iter):
+        st = time()
         overlay = self.overlay
         save_images = []
         for i in range(len(test_display_data)):
@@ -299,3 +300,5 @@ class MaskGenerator(BaseModel):
         write_images(
             save_images, curr_iter, comet_exp=self.comet_exp, store_im=self.store_image
         )
+
+        return time() - st
