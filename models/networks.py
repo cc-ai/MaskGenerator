@@ -1,13 +1,11 @@
 from __future__ import absolute_import
 import torch
 import torch.nn as nn
-from torch.nn import functional as F
 import functools
-from torch.optim import lr_scheduler
 from torch.nn import init
 from models.blocks import Conv2dBlock, ConvTranspose2dBlock, ResBlocks
-from utils import *
 import torch.autograd as autograd
+
 
 ###############################################################################
 # Helper Functions
@@ -67,7 +65,9 @@ def calc_gradient_penalty(opt, netD, real_data, fake_data):
     nc = opt.dis.default.input_nc
     alpha = torch.rand(real_data.shape)
     # alpha = alpha.view(batch_size, nc, DIM, DIM)
-    # alpha = alpha.expand(batch_size, int(real_data.nelement() / batch_size)).contiguous()
+    # alpha = alpha.expand(
+    #     batch_size, int(real_data.nelement() / batch_size)
+    # ).contiguous()
 
     alpha = alpha.cuda()
     interpolates = alpha * real_data.detach() + ((1 - alpha) * fake_data.detach())

@@ -3,7 +3,6 @@ import itertools
 from .base_model import BaseModel
 from . import networks
 from utils import write_images
-from addict import Dict
 
 
 # Domain adaptation for real data
@@ -19,11 +18,13 @@ class MaskGenerator(BaseModel):
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
 
-        # specify the training losses you want to print out. The program will call base_model.get_current_losses
+        # specify the training losses you want to print out.
+        # The program will call base_model.get_current_losses
         self.loss_names = []
         self.loss_name = opt.model.loss_name
 
-        # specify the models you want to save to the disk. The program will call base_model.save_networks and base_model.load_networks
+        # specify the models you want to save to the disk.
+        # The program will call base_model.save_networks and base_model.load_networks
         if self.isTrain:
             self.model_names = ["G", "D", "D_F", "D_P"]
 
@@ -39,7 +40,9 @@ class MaskGenerator(BaseModel):
         self.netD = networks.define_D(opt).to(self.device)
 
         # Use the latent vector to define input_nc
-        opt.dis.default.input_nc = (2 ** opt.gen.encoder.n_downsample) * opt.gen.encoder.dim
+        opt.dis.default.input_nc = (
+            2 ** opt.gen.encoder.n_downsample
+        ) * opt.gen.encoder.dim
         opt.dis.default.n_layers = opt.dis.feature_DA.n_layers
         self.netD_F = networks.define_D(opt).to(
             self.device
@@ -145,7 +148,9 @@ class MaskGenerator(BaseModel):
             grad_penalty = networks.calc_gradient_penalty(
                 self.opt, self.netD_P, self.mask, self.r_fake_mask
             )
-            self.loss_D_P = (self.loss_D_P_sim + self.loss_D_P_real) * 0.5 + grad_penalty
+            self.loss_D_P = (
+                self.loss_D_P_sim + self.loss_D_P_real
+            ) * 0.5 + grad_penalty
         else:
             # Combined loss
             self.loss_D_P = (self.loss_D_P_sim + self.loss_D_P_real) * 0.5
@@ -153,8 +158,12 @@ class MaskGenerator(BaseModel):
         # Log D loss to comet:
         if self.comet_exp is not None:
             self.comet_exp.log_metric("loss D Pixel DA", self.loss_D_P.cpu().detach())
-            self.comet_exp.log_metric("loss D Pixel DA sim", self.loss_D_P_sim.cpu().detach())
-            self.comet_exp.log_metric("loss D Pixel DA real", self.loss_D_P_real.cpu().detach())
+            self.comet_exp.log_metric(
+                "loss D Pixel DA sim", self.loss_D_P_sim.cpu().detach()
+            )
+            self.comet_exp.log_metric(
+                "loss D Pixel DA real", self.loss_D_P_real.cpu().detach()
+            )
 
         # backward
         self.loss_D_P.backward()
@@ -172,7 +181,9 @@ class MaskGenerator(BaseModel):
             grad_penalty = networks.calc_gradient_penalty(
                 self.opt, self.netD_F, self.sim_latent_vec, self.real_latent_vec
             )
-            self.loss_D_F = (self.loss_D_F_sim + self.loss_D_F_real) * 0.5 + grad_penalty
+            self.loss_D_F = (
+                self.loss_D_F_sim + self.loss_D_F_real
+            ) * 0.5 + grad_penalty
         else:
             # Combined loss
             self.loss_D_F = (self.loss_D_F_sim + self.loss_D_F_real) * 0.5
@@ -180,8 +191,12 @@ class MaskGenerator(BaseModel):
         # Log D loss to comet:
         if self.comet_exp is not None:
             self.comet_exp.log_metric("loss D Feature DA", self.loss_D_F.cpu().detach())
-            self.comet_exp.log_metric("loss D Feature DA sim", self.loss_D_F_sim.cpu().detach())
-            self.comet_exp.log_metric("loss D Feature DA real", self.loss_D_F_real.cpu().detach())
+            self.comet_exp.log_metric(
+                "loss D Feature DA sim", self.loss_D_F_sim.cpu().detach()
+            )
+            self.comet_exp.log_metric(
+                "loss D Feature DA real", self.loss_D_F_real.cpu().detach()
+            )
 
         # backward
         self.loss_D_F.backward()
@@ -205,9 +220,15 @@ class MaskGenerator(BaseModel):
         # Log G loss to comet:
         if self.comet_exp is not None:
             self.comet_exp.log_metric("loss G", self.loss_G.cpu().detach())
-            self.comet_exp.log_metric("loss G standard", self.loss_G_standard.cpu().detach())
-            self.comet_exp.log_metric("loss G Feature DA", self.loss_G_DA_F.cpu().detach())
-            self.comet_exp.log_metric("loss G Pixel DA", self.loss_G_DA_P.cpu().detach())
+            self.comet_exp.log_metric(
+                "loss G standard", self.loss_G_standard.cpu().detach()
+            )
+            self.comet_exp.log_metric(
+                "loss G Feature DA", self.loss_G_DA_F.cpu().detach()
+            )
+            self.comet_exp.log_metric(
+                "loss G Pixel DA", self.loss_G_DA_P.cpu().detach()
+            )
         self.loss_G.backward()
 
     def optimize_parameters(self):
@@ -284,4 +305,6 @@ class MaskGenerator(BaseModel):
             )
             save_images.append(save_real_mask_seg)
             save_images.append(save_real_mask)
-        write_images(save_images, curr_iter, comet_exp=self.comet_exp, store_im=self.store_image)
+        write_images(
+            save_images, curr_iter, comet_exp=self.comet_exp, store_im=self.store_image
+        )

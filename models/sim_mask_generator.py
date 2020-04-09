@@ -3,7 +3,6 @@ import itertools
 from .base_model import BaseModel
 from . import networks
 from utils import write_images
-from addict import Dict
 
 
 # To be used on simulated data only
@@ -19,11 +18,13 @@ class SimMaskGenerator(BaseModel):
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
 
-        # specify the training losses you want to print out. The program will call base_model.get_current_losses
+        # specify the training losses you want to print out.
+        # The program will call base_model.get_current_losses
         self.loss_names = []
         self.loss_name = opt.model.loss_name
 
-        # specify the models you want to save to the disk. The program will call base_model.save_networks and base_model.load_networks
+        # specify the models you want to save to the disk.
+        # The program will call base_model.save_networks and base_model.load_networks
         if self.isTrain:
             self.model_names = ["G", "D"]
 
@@ -153,4 +154,6 @@ class SimMaskGenerator(BaseModel):
             else:
                 save_images.append(self.mask[0].repeat(3, 1, 1))
                 save_images.append(self.fake_mask[0].repeat(3, 1, 1))
-        write_images(save_images, curr_iter, comet_exp=self.comet_exp, store_im=self.store_image)
+        write_images(
+            save_images, curr_iter, comet_exp=self.comet_exp, store_im=self.store_image
+        )
