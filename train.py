@@ -61,7 +61,8 @@ if __name__ == "__main__":
                 model.optimize_parameters()
 
                 if total_steps % opt.val.save_im_freq == 0:
-                    model.save_test_images(test_display_images, total_steps)
+                    model.save_test_images(test_display_images, total_steps, name = "test_iter_")
+                    model.save_test_images(train_display_images, total_steps, name = "train_iter_")
 
                 if total_steps % opt.train.save_freq == 0:
                     print(

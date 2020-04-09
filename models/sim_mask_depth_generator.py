@@ -128,7 +128,7 @@ class SimMaskDepthGenerator(BaseModel):
         self.backward_D()
         self.optimizer_D.step()
 
-    def save_test_images(self, test_display_data, curr_iter):
+    def save_test_images(self, test_display_data, curr_iter, name = "test_iter_"):
         overlay = self.overlay
         save_images = []
         for i in range(len(test_display_data)):
@@ -158,5 +158,5 @@ class SimMaskDepthGenerator(BaseModel):
                 save_images.append(save_depth.repeat(3, 1, 1))
                 save_images.append(self.mask[0].repeat(3, 1, 1))
                 save_images.append(self.fake_mask[0].repeat(3, 1, 1))
-        write_images(save_images, curr_iter, im_per_row=4, comet_exp=self.comet_exp, store_im=self.store_image)
+        write_images(save_images, curr_iter, im_per_row=4, comet_exp=self.comet_exp, store_im=self.store_image, name = name)
         return(save_images)
