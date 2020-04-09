@@ -141,7 +141,7 @@ class BaseModel:
                 )
         print("-----------------------------------------------")
 
-    # set requies_grad=Fasle to avoid computation
+    # set requires_grad=False to avoid computation
     def set_requires_grad(self, nets, requires_grad=False):
         if not isinstance(nets, list):
             nets = [nets]
