@@ -121,6 +121,7 @@ train:
   lambdas: # scaling factors in the total loss
   log_level: 1 # 0: no log, 1: only aggregated losses, >1 detailed losses
   save_im_freq: 100
+  save_im: False
 
 # -----------------------------
 # ----- Validation Params -----

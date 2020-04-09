@@ -259,7 +259,7 @@ class MaskGenerator(BaseModel):
         self.backward_D_P(steps)
         self.optimizer_D_P.step()
 
-    def save_test_images(self, test_display_data, curr_iter):
+    def save_test_images(self, test_display_data, curr_iter, is_test = True):
         st = time()
         overlay = self.overlay
         save_images = []
@@ -305,7 +305,7 @@ class MaskGenerator(BaseModel):
             save_images.append(save_real_mask_seg)
             save_images.append(save_real_mask)
         write_images(
-            save_images, curr_iter, comet_exp=self.comet_exp, store_im=self.store_image
+            save_images, curr_iter, comet_exp=self.comet_exp, store_im=self.store_image, is_test = is_test
         )
 
         return time() - st
