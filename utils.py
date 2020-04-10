@@ -162,7 +162,7 @@ def prepare_sub_folder(output_directory):
 
 
 def write_images(
-    image_outputs, curr_iter, im_per_row=3, comet_exp=None, store_im=False, is_test = True
+    image_outputs, curr_iter, im_per_row=3, comet_exp=None, store_im=False, is_test=True
 ):
     """Save output image
     Arguments:
@@ -180,8 +180,9 @@ def write_images(
     if comet_exp is not None:
         if is_test:
             comet_exp.log_image(image_grid, name="test_iter_" + str(curr_iter))
-        else: 
+        else:
             comet_exp.log_image(image_grid, name="train_iter_" + str(curr_iter))
+
 
 def avg_duration(times, batch_size=1):
     """Given a list of times, return the average duration (i.e. difference of times)

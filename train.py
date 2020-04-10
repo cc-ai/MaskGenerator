@@ -69,12 +69,12 @@ if __name__ == "__main__":
     train_loader = get_loader(opts, real=True, no_check=args.no_check)
     print("Creating display images...", end="", flush=True)
     val_iter = iter(val_loader)
-    
+
     test_display_images = [
         Dict(val_iter.next()) for i in range(opts.comet.display_size)
     ]
-    
-    if opts.train.save_im:   
+
+    if opts.train.save_im:
         train_iter = iter(train_loader)
         train_display_images = [
             Dict(val_iter.next()) for i in range(opts.comet.display_size)
@@ -129,12 +129,15 @@ if __name__ == "__main__":
                 print(f"({total_steps}) Inferring test images...", end="", flush=True)
                 t = model.save_test_images(test_display_images, total_steps)
                 print("ok in {:.2f}s.".format(t))
-                
-                if opts.train.save_im:   
-                    print(f"({total_steps}) Inferring train images...", end="", flush=True)
-                    t = model.save_test_images(train_display_images, total_steps, is_test = False)
+
+                if opts.train.save_im:
+                    print(
+                        f"({total_steps}) Inferring train images...", end="", flush=True
+                    )
+                    t = model.save_test_images(
+                        train_display_images, total_steps, is_test=False
+                    )
                     print("ok in {:.2f}s.".format(t))
-                    
 
         print("saving (epoch %d, total_steps %d)" % (epoch, total_steps))
         save_suffix = "iter_%d" % total_steps
