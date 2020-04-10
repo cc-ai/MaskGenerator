@@ -1,19 +1,15 @@
 import os
-import re
 from pathlib import Path
-import subprocess
-from copy import copy
 import yaml
 from addict import Dict
-from torch.nn import init
 import torch
-import numpy as np
 import importlib
 from models.base_model import BaseModel
-import functools
-import torch.nn as nn
 import time
 import torchvision.utils as vutils
+from torch.optim import lr_scheduler
+import numpy as np
+from copy import deepcopy
 
 
 def load_opts(path=None, default=None):
@@ -43,6 +39,25 @@ def load_opts(path=None, default=None):
     return set_data_paths(default_opts)
 
 
+def env_to_path(path):
+    """Transorms an environment variable mention in a json
+    into its actual value. E.g. $HOME/clouds -> /home/vsch/clouds
+
+    Args:
+        path (str): path potentially containing the env variable
+
+    """
+    path = str(path)
+    path_elements = path.split("/")
+    new_path = []
+    for el in path_elements:
+        if "$" in el:
+            new_path.append(os.environ[el.replace("$", "")])
+        else:
+            new_path.append(el)
+    return "/".join(new_path)
+
+
 def set_data_paths(opts):
     """Update the data files paths in data.files.train and data.files.val
     from data.files.base
@@ -53,57 +68,66 @@ def set_data_paths(opts):
     """
 
     for mode in ["train", "val"]:
-        for domain in opts.data.files[mode]:
-            opts.data.files[mode] = str(Path(opts.data.files.base) / opts.data.files[mode])
-            if opts.data.use_real:
-                opts.data.real_files[mode] = str(
-                    Path(opts.data.real_files.base) / opts.data.real_files[mode]
-                )
+        opts.data.files[mode] = str(
+            Path(env_to_path(opts.data.files.base)) / opts.data.files[mode]
+        )
+        if opts.data.use_real:
+            opts.data.real_files[mode] = str(
+                Path(env_to_path(opts.data.real_files.base))
+                / opts.data.real_files[mode]
+            )
     return opts
 
 
 def set_mode(mode, opts):
-
+    opts = deepcopy(opts)
     if mode == "train":
         opts.model.is_train = True
     elif mode == "test":
         opts.model.is_train = False
-
     return opts
 
 
-def create_model(opt):
+def create_model(opts):
     # Find model in "models" folder
-    model_name = str(opt.model.model_name)
+    model_name = str(opts.model.model_name)
     modellib = importlib.import_module("models." + model_name)
     target_model_name = model_name.replace("_", "")
     for name, cls in modellib.__dict__.items():
         if name.lower() == target_model_name.lower() and issubclass(cls, BaseModel):
             model = cls
     instance = model()
-    instance.initialize(opt)
+    instance.initialize(opts)
     # print("model [%s] was created" % (instance.name()))
     return instance
 
 
-def get_scheduler(optimizer, opt):
-    if opt.lr_policy == "lambda":
+def get_scheduler(optimizer, opts):
+    if opts.lr_policy == "lambda":
 
         def lambda_rule(epoch):
-            lr_l = 1.0 - max(0, epoch + opt.epoch_count - opt.niter) / float(opt.niter_decay + 1)
+            lr_l = 1.0 - max(0, epoch + opts.epoch_count - opts.niter) / float(
+                opts.niter_decay + 1
+            )
             return lr_l
 
         scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_rule)
-    elif opt.lr_policy == "step":
-        scheduler = lr_scheduler.StepLR(optimizer, step_size=opt.lr_decay_iters, gamma=0.1)
-    elif opt.lr_policy == "plateau":
+    elif opts.lr_policy == "step":
+        scheduler = lr_scheduler.StepLR(
+            optimizer, step_size=opts.lr_decay_iters, gamma=0.1
+        )
+    elif opts.lr_policy == "plateau":
         scheduler = lr_scheduler.ReduceLROnPlateau(
             optimizer, mode="min", factor=0.2, threshold=0.01, patience=5
         )
-    elif opt.lr_policy == "cosine":
-        scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=opt.niter, eta_min=0)
+    elif opts.lr_policy == "cosine":
+        scheduler = lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=opts.niter, eta_min=0
+        )
     else:
-        return NotImplementedError("learning rate policy [%s] is not implemented", opt.lr_policy)
+        return NotImplementedError(
+            "learning rate policy [%s] is not implemented", opts.lr_policy
+        )
     return scheduler
 
 
@@ -137,7 +161,10 @@ def prepare_sub_folder(output_directory):
     return checkpoint_directory, image_directory
 
 
-def write_images(image_outputs, curr_iter, im_per_row=3, comet_exp=None, store_im=False, name= "test_iter_"):
+
+def write_images(
+    image_outputs, curr_iter, im_per_row=3, comet_exp=None, store_im=False, is_test=True
+):
     """Save output image
     Arguments:
         image_outputs {Tensor list} -- list of output images
@@ -146,9 +173,90 @@ def write_images(image_outputs, curr_iter, im_per_row=3, comet_exp=None, store_i
     """
 
     image_outputs = torch.stack(image_outputs)
-    image_grid = vutils.make_grid(image_outputs, nrow=im_per_row, normalize=True, scale_each=True)
+    image_grid = vutils.make_grid(
+        image_outputs, nrow=im_per_row, normalize=True, scale_each=True
+    )
     image_grid = image_grid.permute(1, 2, 0).cpu().detach().numpy()
 
     if comet_exp is not None:
-        comet_exp.log_image(image_grid, name=name + str(curr_iter))
+        if is_test:
+            comet_exp.log_image(
+                image_grid, name="test_iter_" + str(curr_iter), step=curr_iter
+            )
+        else:
+            comet_exp.log_image(
+                image_grid, name="train_iter_" + str(curr_iter), step=curr_iter
+            )
 
+
+def avg_duration(times, batch_size=1):
+    """Given a list of times, return the average duration (i.e. difference of times)
+    of processing 1 single sample (therefore / batch_size)
+
+    Args:
+        times (iterable): Iterable containing the absolute time
+
+    Returns:
+        float: Average duration per sample
+    """
+    t = list(times)
+    return (np.array(t + [0]) - np.array([0] + t))[1:-1].mean() / batch_size
+
+
+def flatten_opts(opts):
+    """Flattens a multi-level addict.Dict or native dictionnary into a single
+    level native dict with string keys representing the keys sequence to reach
+    a value in the original argument.
+
+    d = addict.Dict()
+    d.a.b.c = 2
+    d.a.b.d = 3
+    d.a.e = 4
+    d.f = 5
+    flatten_opts(d)
+    >>> {
+        "a.b.c": 2,
+        "a.b.d": 3,
+        "a.e": 4,
+        "f": 5,
+    }
+
+    Args:
+        opts (addict.Dict or dict): addict dictionnary to flatten
+
+    Returns:
+        dict: flattened dictionnary
+    """
+    values_list = []
+
+    def p(d, prefix="", vals=[]):
+        for k, v in d.items():
+            if isinstance(v, (Dict, dict)):
+                p(v, prefix + k + ".", vals)
+            elif isinstance(v, list):
+                if v and isinstance(v[0], (Dict, dict)):
+                    for i, m in enumerate(v):
+                        p(m, prefix + k + "." + str(i) + ".", vals)
+                else:
+                    vals.append((prefix + k, str(v)))
+            else:
+                if isinstance(v, Path):
+                    v = str(v)
+                vals.append((prefix + k, v))
+
+    p(opts, vals=values_list)
+    return dict(values_list)
+
+
+def print_opts(flats):
+    """print flatenned opts
+
+    Args:
+        flats (dict): flatenned options
+    """
+    print(
+        "\n".join(
+            "{:30}: {:15}".format(k, v if v is not None else "")
+            for k, v in flats.items()
+        )
+    )

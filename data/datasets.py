@@ -15,7 +15,7 @@ IMG_EXTENSIONS = set(
 
 
 class SimDataset(Dataset):
-    def __init__(self, opts, transform=None):
+    def __init__(self, opts, transform=None, no_check=False):
 
         isTrain = opts.model.is_train
         if isTrain:
@@ -30,8 +30,9 @@ class SimDataset(Dataset):
         else:
             raise ValueError("Unknown file list type in {}".format(file_list_path))
 
-        self.check_samples()
         self.file_list_path = str(file_list_path)
+        if not no_check:
+            self.check_samples()
         self.transform = transform
         self.opts = opts
 
@@ -39,9 +40,12 @@ class SimDataset(Dataset):
         """Checks that every file listed in samples_paths actually
         exist on the file-system
         """
+        l, p = (len(self.samples_paths), self.file_list_path)
+        print(f"Checking {l} samples in {p}...", end="", flush=True)
         for s in self.samples_paths:
             for k, v in s.items():
                 assert Path(v).exists(), f"{k} {v} does not exist"
+        print(" ok.")
 
     def json_load(self, file_path):
         with open(file_path, "r") as f:
@@ -69,7 +73,10 @@ class SimDataset(Dataset):
             return Dict(
                 {
                     "data": self.transform(
-                        {task: pil_image_loader(path, task) for task, path in paths.items()}
+                        {
+                            task: pil_image_loader(path, task)
+                            for task, path in paths.items()
+                        }
                     ),
                     "paths": paths,
                 }
@@ -77,7 +84,9 @@ class SimDataset(Dataset):
 
         return Dict(
             {
-                "data": {task: pil_image_loader(path, task) for task, path in paths.items()},
+                "data": {
+                    task: pil_image_loader(path, task) for task, path in paths.items()
+                },
                 "paths": paths,
             }
         )
@@ -121,7 +130,7 @@ def is_image_file(filename):
 
 
 class RealSimDataset(Dataset):
-    def __init__(self, opts, transform=None):
+    def __init__(self, opts, transform=None, no_check=False):
 
         isTrain = opts.model.is_train
         if isTrain:
@@ -140,9 +149,10 @@ class RealSimDataset(Dataset):
         else:
             raise ValueError("Unknown file list type in {}".format(file_list_path))
 
-        self.check_samples()
         self.file_list_path = str(file_list_path)
         self.real_file_list_path = str(real_file_list_path)
+        if not no_check:
+            self.check_samples()
         self.transform = transform
         self.opts = opts
 
@@ -150,13 +160,23 @@ class RealSimDataset(Dataset):
         """Checks that every file listed in samples_paths actually
         exist on the file-system
         """
+        l, p = (len(self.samples_paths), self.file_list_path)
+        print(f"Checking {l} samples in {p}...", end="", flush=True)
+
         for s in self.samples_paths:
             for k, v in s.items():
                 assert Path(v).exists(), f"{k} {v} does not exist"
 
+        print(" ok.")
+
+        l, p = (len(self.real_samples_paths), self.real_file_list_path)
+        print(f"Checking {l} samples in {p}...", end="", flush=True)
+
         for s in self.real_samples_paths:
             for k, v in s.items():
                 assert Path(v).exists(), f"{k} {v} does not exist"
+
+        print(" ok.")
 
     def json_load(self, file_path):
         with open(file_path, "r") as f:
@@ -189,7 +209,10 @@ class RealSimDataset(Dataset):
             return Dict(
                 {
                     "data": self.transform(
-                        {task: pil_image_loader(path, task) for task, path in paths.items()}
+                        {
+                            task: pil_image_loader(path, task)
+                            for task, path in paths.items()
+                        }
                     ),
                     "paths": paths,
                 }
@@ -197,7 +220,9 @@ class RealSimDataset(Dataset):
 
         return Dict(
             {
-                "data": {task: pil_image_loader(path, task) for task, path in paths.items()},
+                "data": {
+                    task: pil_image_loader(path, task) for task, path in paths.items()
+                },
                 "paths": paths,
             }
         )
@@ -206,7 +231,8 @@ class RealSimDataset(Dataset):
         return len(self.samples_paths)
 
 
-def get_loader(opts, real=True, depth= True):
+
+def get_loader(opts, real=True, depth= True, no_check= False):
     if real:
         if depth == True:
             return DataLoader(
@@ -214,6 +240,7 @@ def get_loader(opts, real=True, depth= True):
                 batch_size=opts.data.loaders.get("batch_size", 4),
                 shuffle=True,
                 num_workers=opts.data.loaders.get("num_workers", 8),
+                no_check=no_check,
             )
         else:
             return DataLoader(
@@ -221,6 +248,7 @@ def get_loader(opts, real=True, depth= True):
                 batch_size=opts.data.loaders.get("batch_size", 4),
                 shuffle=True,
                 num_workers=opts.data.loaders.get("num_workers", 8),
+                no_check=no_check,
             )
     else:
         if depth == True:
@@ -229,6 +257,7 @@ def get_loader(opts, real=True, depth= True):
                 batch_size=opts.data.loaders.get("batch_size", 4),
                 shuffle=True,
                 num_workers=opts.data.loaders.get("num_workers", 8),
+                no_check=no_check,
             )
         else:
             return DataLoader(
@@ -236,6 +265,7 @@ def get_loader(opts, real=True, depth= True):
                 batch_size=opts.data.loaders.get("batch_size", 4),
                 shuffle=True,
                 num_workers=opts.data.loaders.get("num_workers", 8),
+                no_check=no_check,
             )
 
 

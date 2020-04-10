@@ -1,13 +1,11 @@
 from __future__ import absolute_import
 import torch
 import torch.nn as nn
-from torch.nn import functional as F
 import functools
-from torch.optim import lr_scheduler
 from torch.nn import init
 from models.blocks import Conv2dBlock, ConvTranspose2dBlock, ResBlocks
-from utils import *
 import torch.autograd as autograd
+
 
 ###############################################################################
 # Helper Functions
@@ -51,7 +49,9 @@ def get_norm_layer(norm_type="instance"):
     if norm_type == "batch":
         norm_layer = functools.partial(nn.BatchNorm2d, affine=True)
     elif norm_type == "instance":
-        norm_layer = functools.partial(nn.InstanceNorm2d, affine=False, track_running_stats=False)
+        norm_layer = functools.partial(
+            nn.InstanceNorm2d, affine=False, track_running_stats=False
+        )
     elif norm_type == "none":
         norm_layer = None
     else:
@@ -59,17 +59,15 @@ def get_norm_layer(norm_type="instance"):
     return norm_layer
 
 
-# def WassersteinLoss(input, target_tensor):
-#    #Use 0.5 threshold to determine whether real or fake
-
-
-def calc_gradient_penalty(opt, netD, real_data, fake_data):
-    DIM = opt.data.img_size
+def calc_gradient_penalty(opts, netD, real_data, fake_data):
+    DIM = opts.data.img_size
     LAMBDA = 10
-    nc = opt.dis.default.input_nc
+    nc = opts.dis.default.input_nc
     alpha = torch.rand(real_data.shape)
     # alpha = alpha.view(batch_size, nc, DIM, DIM)
-    # alpha = alpha.expand(batch_size, int(real_data.nelement() / batch_size)).contiguous()
+    # alpha = alpha.expand(
+    #     batch_size, int(real_data.nelement() / batch_size)
+    # ).contiguous()
 
     alpha = alpha.cuda()
     interpolates = alpha * real_data.detach() + ((1 - alpha) * fake_data.detach())
@@ -137,8 +135,8 @@ def define_G(opts):
     dec_norm = opts.gen.decoder.norm
     res_norm = opts.gen.encoder.res_norm
 
-    init_type = opts.gen.opt.init_type
-    init_gain = opts.gen.opt.init_gain
+    init_type = opts.gen.optim.init_type
+    init_gain = opts.gen.optim.init_gain
 
     net = None
 
@@ -172,13 +170,21 @@ def define_D(opts):
     nf_mult = opts.dis.default.nf_mult
     nf_mult_prev = opts.dis.default.nf_mult_prev
 
-    init_type = opts.gen.opt.init_type
-    init_gain = opts.gen.opt.init_gain
+    init_type = opts.gen.optim.init_type
+    init_gain = opts.gen.optim.init_gain
 
     net = None
 
     net = NLayerDiscriminator(
-        input_nc, ndf, n_layers, norm_layer, use_sigmoid, kw, padw, nf_mult, nf_mult_prev
+        input_nc,
+        ndf,
+        n_layers,
+        norm_layer,
+        use_sigmoid,
+        kw,
+        padw,
+        nf_mult,
+        nf_mult_prev,
     )
 
     init_weights(net, init_type, init_gain)
@@ -208,13 +214,11 @@ class Generator(nn.Module):
     ):
         super(Generator, self).__init__()
         # --------------------ENCODER----------------------------
-        self.encoder = [
-            Conv2dBlock(input_dim, dim, 7, 1, 3),
-        ]
+        self.encoder = [Conv2dBlock(input_dim, dim, 7, 1, 3)]
 
         for i in range(n_downsample):
             self.encoder += [
-                Conv2dBlock(dim, 2 * dim, 4, 2, 1, norm=enc_norm, activation=activ),
+                Conv2dBlock(dim, 2 * dim, 4, 2, 1, norm=enc_norm, activation=activ)
             ]
             dim = 2 * dim
 
@@ -225,7 +229,9 @@ class Generator(nn.Module):
         self.decoder = []
         for i in range(n_downsample):
             self.decoder += [
-                ConvTranspose2dBlock(dim, int(dim / 2), 2, 2, 0, norm=dec_norm, activation=activ)
+                ConvTranspose2dBlock(
+                    dim, int(dim / 2), 2, 2, 0, norm=dec_norm, activation=activ
+                )
             ]
             dim = int(dim / 2)
         self.decoder += [Conv2dBlock(dim, output_dim, 3, 1, 1, activation=output_activ)]
@@ -252,7 +258,16 @@ class Generator(nn.Module):
 # Defines the PatchGAN discriminator with the specified arguments.
 class NLayerDiscriminator(nn.Module):
     def __init__(
-        self, input_nc, ndf, n_layers, norm_layer, use_sigmoid, kw, padw, nf_mult, nf_mult_prev,
+        self,
+        input_nc,
+        ndf,
+        n_layers,
+        norm_layer,
+        use_sigmoid,
+        kw,
+        padw,
+        nf_mult,
+        nf_mult_prev,
     ):
         super(NLayerDiscriminator, self).__init__()
 
@@ -263,7 +278,9 @@ class NLayerDiscriminator(nn.Module):
 
         sequence = [
             # Use spectral normalization
-            SpectralNorm(nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw)),
+            SpectralNorm(
+                nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw)
+            ),
             nn.LeakyReLU(0.2, True),
         ]
 
@@ -306,7 +323,9 @@ class NLayerDiscriminator(nn.Module):
 
         # Use spectral normalization
         sequence += [
-            SpectralNorm(nn.Conv2d(ndf * nf_mult, 1, kernel_size=kw, stride=1, padding=padw))
+            SpectralNorm(
+                nn.Conv2d(ndf * nf_mult, 1, kernel_size=kw, stride=1, padding=padw)
+            )
         ]
 
         if use_sigmoid:
