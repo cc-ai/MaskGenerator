@@ -119,7 +119,7 @@ model:
 
 
 comet:
-  workspace: "sunandr"
+  workspace: "melisandeteng"
   project_name: "mask-generator"
   exp: None #Will be defined in train.py
   display_size: 5 #Num images to display
@@ -134,7 +134,7 @@ train:
   log_level: 1 # 0: no log, 1: only aggregated losses, >1 detailed losses
   print_freq: 1
   output_dir: '/network/tmp1/ccai/data/mask_generation/output_files/11K_wgan_feature_pixelDA'
-  save_im_freq: 5000
+  save_im: True
   save_freq: 20000
   resume_checkpoint: false
   load_iter: 500000
