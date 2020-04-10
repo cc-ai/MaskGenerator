@@ -40,9 +40,7 @@ class MaskGenerator(BaseModel):
         self.netD = networks.define_D(opts).to(self.device)
 
         # Use the latent vector to define input_nc
-        opts.dis.default.input_nc = (
-            2 ** opts.gen.encoder.n_downsample
-        ) * opts.gen.encoder.dim
+        opts.dis.default.input_nc = (2 ** opts.gen.encoder.n_downsample) * opts.gen.encoder.dim
         opts.dis.default.n_layers = opts.dis.feature_DA.n_layers
         self.netD_F = networks.define_D(opts).to(
             self.device
@@ -200,10 +198,19 @@ class MaskGenerator(BaseModel):
         self.loss_D_F.backward()
 
     def backward_G(self, steps=0):
-        # Standard G loss
+        """
+        # Generative loss
         self.loss_G_standard = self.criterionGAN(
             self.netD(torch.cat([self.image, self.fake_mask], dim=1)), True
         )
+        """
+
+        # Discriminative loss
+        self.loss_G_standard = self.BCELoss(self.fake_mask, self.mask)
+
+        tv_weight = 0.000001
+        # Total variational regularization
+        self.loss_G_tv = tv_loss(self.fake_mask, tv_weight)
 
         # Domain adaptation feature loss
         self.loss_G_DA_F = (
@@ -214,13 +221,16 @@ class MaskGenerator(BaseModel):
         # Domain adaptation pixel loss
         self.loss_G_DA_P = self.criterionGAN(self.netD_P(self.r_fake_mask), True)
 
-        self.loss_G = self.loss_G_standard + (self.loss_G_DA_F + self.loss_G_DA_P) * 0.5
+        self.loss_G = (
+            self.loss_G_standard + self.loss_G_tv + (self.loss_G_DA_F + self.loss_G_DA_P) * 0.5
+        )
         # Log G loss to comet:
         if self.comet_exp is not None:
             self.comet_exp.log_metrics(
                 {
                     "loss G": self.loss_G.cpu().detach(),
                     "loss G standard": self.loss_G_standard.cpu().detach(),
+                    "loss G TV": self.loss_G_tv.cpu().detach(),
                     "loss G Feature DA": self.loss_G_DA_F.cpu().detach(),
                     "loss G Pixel DA": self.loss_G_DA_P.cpu().detach(),
                 },
@@ -304,8 +314,6 @@ class MaskGenerator(BaseModel):
             )
             save_images.append(save_real_mask_seg)
             save_images.append(save_real_mask)
-        write_images(
-            save_images, curr_iter, comet_exp=self.comet_exp, store_im=self.store_image
-        )
+        write_images(save_images, curr_iter, comet_exp=self.comet_exp, store_im=self.store_image)
 
         return time() - st

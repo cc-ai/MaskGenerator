@@ -68,13 +68,10 @@ def set_data_paths(opts):
     """
 
     for mode in ["train", "val"]:
-        opts.data.files[mode] = str(
-            Path(env_to_path(opts.data.files.base)) / opts.data.files[mode]
-        )
+        opts.data.files[mode] = str(Path(env_to_path(opts.data.files.base)) / opts.data.files[mode])
         if opts.data.use_real:
             opts.data.real_files[mode] = str(
-                Path(env_to_path(opts.data.real_files.base))
-                / opts.data.real_files[mode]
+                Path(env_to_path(opts.data.real_files.base)) / opts.data.real_files[mode]
             )
     return opts
 
@@ -106,28 +103,20 @@ def get_scheduler(optimizer, opts):
     if opts.lr_policy == "lambda":
 
         def lambda_rule(epoch):
-            lr_l = 1.0 - max(0, epoch + opts.epoch_count - opts.niter) / float(
-                opts.niter_decay + 1
-            )
+            lr_l = 1.0 - max(0, epoch + opts.epoch_count - opts.niter) / float(opts.niter_decay + 1)
             return lr_l
 
         scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_rule)
     elif opts.lr_policy == "step":
-        scheduler = lr_scheduler.StepLR(
-            optimizer, step_size=opts.lr_decay_iters, gamma=0.1
-        )
+        scheduler = lr_scheduler.StepLR(optimizer, step_size=opts.lr_decay_iters, gamma=0.1)
     elif opts.lr_policy == "plateau":
         scheduler = lr_scheduler.ReduceLROnPlateau(
             optimizer, mode="min", factor=0.2, threshold=0.01, patience=5
         )
     elif opts.lr_policy == "cosine":
-        scheduler = lr_scheduler.CosineAnnealingLR(
-            optimizer, T_max=opts.niter, eta_min=0
-        )
+        scheduler = lr_scheduler.CosineAnnealingLR(optimizer, T_max=opts.niter, eta_min=0)
     else:
-        return NotImplementedError(
-            "learning rate policy [%s] is not implemented", opts.lr_policy
-        )
+        return NotImplementedError("learning rate policy [%s] is not implemented", opts.lr_policy)
     return scheduler
 
 
@@ -161,9 +150,7 @@ def prepare_sub_folder(output_directory):
     return checkpoint_directory, image_directory
 
 
-def write_images(
-    image_outputs, curr_iter, im_per_row=3, comet_exp=None, store_im=False
-):
+def write_images(image_outputs, curr_iter, im_per_row=3, comet_exp=None, store_im=False):
     """Save output image
     Arguments:
         image_outputs {Tensor list} -- list of output images
@@ -172,9 +159,7 @@ def write_images(
     """
 
     image_outputs = torch.stack(image_outputs)
-    image_grid = vutils.make_grid(
-        image_outputs, nrow=im_per_row, normalize=True, scale_each=True
-    )
+    image_grid = vutils.make_grid(image_outputs, nrow=im_per_row, normalize=True, scale_each=True)
     image_grid = image_grid.permute(1, 2, 0).cpu().detach().numpy()
 
     if comet_exp is not None:
@@ -246,9 +231,20 @@ def print_opts(flats):
     Args:
         flats (dict): flatenned options
     """
-    print(
-        "\n".join(
-            "{:30}: {:15}".format(k, v if v is not None else "")
-            for k, v in flats.items()
-        )
-    )
+    print("\n".join("{:30}: {:15}".format(k, v if v is not None else "") for k, v in flats.items()))
+
+
+def tv_loss(img, tv_weight):
+    """
+    Compute total variation loss.
+    Inputs:
+    - img: PyTorch Variable of shape (1, 3, H, W) holding an input image.
+    - tv_weight: Scalar giving the weight w_t to use for the TV loss.
+    Returns:
+    - loss: PyTorch Variable holding a scalar giving the total variation loss
+      for img weighted by tv_weight.
+    """
+    w_variance = torch.sum(torch.pow(img[:, :, :, :-1] - img[:, :, :, 1:], 2))
+    h_variance = torch.sum(torch.pow(img[:, :, :-1, :] - img[:, :, 1:, :], 2))
+    loss = tv_weight * (h_variance + w_variance)
+    return loss
