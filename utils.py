@@ -179,9 +179,13 @@ def write_images(
 
     if comet_exp is not None:
         if is_test:
-            comet_exp.log_image(image_grid, name="test_iter_" + str(curr_iter))
+            comet_exp.log_image(
+                image_grid, name="test_iter_" + str(curr_iter), step=curr_iter
+            )
         else:
-            comet_exp.log_image(image_grid, name="train_iter_" + str(curr_iter))
+            comet_exp.log_image(
+                image_grid, name="train_iter_" + str(curr_iter), step=curr_iter
+            )
 
 
 def avg_duration(times, batch_size=1):

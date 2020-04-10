@@ -5,7 +5,6 @@ from . import networks
 from utils import write_images
 from time import time
 
-
 # Domain adaptation for real data
 class MaskGenerator(BaseModel):
     def name(self):
