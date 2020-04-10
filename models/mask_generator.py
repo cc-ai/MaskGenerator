@@ -4,6 +4,7 @@ from .base_model import BaseModel
 from . import networks
 from utils import write_images
 from time import time
+from ExtraAdam import ExtraAdam
 
 # Domain adaptation for real data
 class MaskGenerator(BaseModel):
@@ -59,26 +60,36 @@ class MaskGenerator(BaseModel):
         self.opts = opts
 
         if self.isTrain:
+            GenOpt = (
+                ExtraAdam
+                if "extra" in opts.gen.optim.optimizer.lower()
+                else torch.optim.Adam
+            )
+            DisOpt = (
+                ExtraAdam
+                if "extra" in opts.dis.optim.optimizer.lower()
+                else torch.optim.Adam
+            )
             # define loss functions
             self.criterionGAN = networks.GANLoss(self.loss_name).to(self.device)
             # initialize optimizers
 
-            self.optimizer_G = torch.optim.Adam(
+            self.optimizer_G = GenOpt(
                 itertools.chain(self.netG.parameters()),
                 lr=opts.gen.optim.lr,
                 betas=(opts.gen.optim.beta1, 0.999),
             )
-            self.optimizer_D = torch.optim.Adam(
+            self.optimizer_D = DisOpt(
                 itertools.chain(self.netD.parameters()),
                 lr=opts.dis.optim.lr,
                 betas=(opts.dis.optim.beta1, 0.999),
             )
-            self.optimizer_D_F = torch.optim.Adam(
+            self.optimizer_D_F = DisOpt(
                 itertools.chain(self.netD_F.parameters()),
                 lr=opts.dis.optim.lr,
                 betas=(opts.dis.optim.beta1, 0.999),
             )
-            self.optimizer_D_P = torch.optim.Adam(
+            self.optimizer_D_P = DisOpt(
                 itertools.chain(self.netD_P.parameters()),
                 lr=opts.dis.optim.lr,
                 betas=(opts.dis.optim.beta1, 0.999),
@@ -229,8 +240,37 @@ class MaskGenerator(BaseModel):
 
         self.loss_G.backward()
 
-    def optimize_parameters(self, steps=0):
+    def optimizer_G_step(self):
+        bs = self.opts.data.loaders.batch_size
+        if "extra" in self.opts.gen.optim.optimizer and self.curr_iter // bs % 2 == 0:
+            self.optimizer_G.extrapolation()
+        else:
+            self.optimizer_G.step()
+
+    def optimizer_D_step(self):
+        bs = self.opts.data.loaders.batch_size
+        if "extra" in self.opts.dis.optim.optimizer and self.curr_iter // bs % 2 == 0:
+            self.optimizer_D.extrapolation()
+        else:
+            self.optimizer_D.step()
+
+    def optimizer_D_F_step(self):
+        bs = self.opts.data.loaders.batch_size
+        if "extra" in self.opts.dis.optim.optimizer and self.curr_iter // bs % 2 == 0:
+            self.optimizer_D_F.extrapolation()
+        else:
+            self.optimizer_D_F.step()
+
+    def optimizer_D_P_step(self):
+        bs = self.opts.data.loaders.batch_size
+        if "extra" in self.opts.dis.optim.optimizer and self.curr_iter // bs % 2 == 0:
+            self.optimizer_D_P.extrapolation()
+        else:
+            self.optimizer_D_P.step()
+
+    def optimize_parameters(self, curr_iter=0):
         # forward
+        self.curr_iter = curr_iter
         self.forward()
 
         # G
@@ -238,26 +278,26 @@ class MaskGenerator(BaseModel):
         self.set_requires_grad(self.netD_F, False)
         self.set_requires_grad(self.netD_P, False)
         self.optimizer_G.zero_grad()
-        self.backward_G(steps)
-        self.optimizer_G.step()
+        self.backward_G(curr_iter)
+        self.optimizer_G_step()
 
         # D
         self.set_requires_grad(self.netD, True)
         self.optimizer_D.zero_grad()
-        self.backward_D(steps)
-        self.optimizer_D.step()
+        self.backward_D(curr_iter)
+        self.optimizer_D_step()
 
         # D Feature - Domain adaptation
         self.set_requires_grad(self.netD_F, True)
         self.optimizer_D_F.zero_grad()
-        self.backward_D_F(steps)
-        self.optimizer_D_F.step()
+        self.backward_D_F(curr_iter)
+        self.optimizer_D_F_step()
 
         # D Pixel - Domain adaptation
         self.set_requires_grad(self.netD_P, True)
         self.optimizer_D_P.zero_grad()
-        self.backward_D_P(steps)
-        self.optimizer_D_P.step()
+        self.backward_D_P(curr_iter)
+        self.optimizer_D_P_step()
 
     def save_test_images(self, test_display_data, curr_iter, is_test=True):
         st = time()
