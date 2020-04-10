@@ -2,7 +2,7 @@ import torch
 import itertools
 from .base_model import BaseModel
 from . import networks
-from utils import write_images
+from utils import write_images, tv_loss
 from time import time
 
 # Domain adaptation for real data
@@ -59,6 +59,7 @@ class MaskGenerator(BaseModel):
         if self.isTrain:
             # define loss functions
             self.criterionGAN = networks.GANLoss(self.loss_name).to(self.device)
+            self.BCELoss = torch.nn.BCELoss().to(self.device)
             # initialize optimizers
 
             self.optimizer_G = torch.optim.Adam(
