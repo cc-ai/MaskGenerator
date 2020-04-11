@@ -19,30 +19,12 @@ from models.mask_generator import MaskGenerator
 
 
 if __name__ == "__main__":
-
-    # --------------------------
-    # -----  Load Options  -----
-    # --------------------------
-    root = Path(__file__).parent.resolve()
-    opt_file = "shared/feature_pixelDA.yml"
-    opts = load_opts(path=root / opt_file, default=root / "shared/defaults.yml")
-    opts = set_mode("train", opts)
-    flats = flatten_opts(opts)
-    print_opts(flats)
-
     # -----------------------------
     # -----  Parse Arguments  -----
     # -----------------------------
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-w", "--workspace", default=opts.comet.workspace, help="Comet Workspace"
-    )
-    parser.add_argument(
-        "-p",
-        "--project_name",
-        default=opts.comet.project_name,
-        help="Comet project_name",
-    )
+    parser.add_argument("-w", "--workspace", help="Comet Workspace")
+    parser.add_argument("-p", "--project_name", help="Comet project_name")
     parser.add_argument(
         "-n",
         "--no_check",
@@ -50,13 +32,30 @@ if __name__ == "__main__":
         default=False,
         help="Prevent sample existence checking for faster dev",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "-c",
+        "--config",
+        help="Config file to use",
+        default="shared/feature_pixelDA.yml",
+    )
+    args = Dict(vars(parser.parse_args()))
+
+    # --------------------------
+    # -----  Load Options  -----
+    # --------------------------
+    root = Path(__file__).parent.resolve()
+    opts = load_opts(path=root / args.config, default=root / "shared/defaults.yml")
+    opts = set_mode("train", opts)
+    flats = flatten_opts(opts)
+    print_opts(flats)
 
     # ------------------------------------
     # -----  Start Comet Experiment  -----
     # ------------------------------------
-    comet_exp = Experiment(workspace=args.workspace, project_name=args.project_name)
-    comet_exp.log_asset(file_data=str(root / opt_file), file_name=root / opt_file)
+    wsp = args.get("workspace") or opts.comet.workspace
+    prn = args.get("project_name") or opts.comet.project_name
+    comet_exp = Experiment(workspace=wsp, project_name=prn)
+    comet_exp.log_asset(file_data=str(root / args.config), file_name=root / args.config)
     comet_exp.log_parameters(flats)
 
     # ----------------------------
