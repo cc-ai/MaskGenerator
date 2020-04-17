@@ -104,7 +104,7 @@ class MaskGenerator(BaseModel):
         # Sim data
         self.image = input.data.x.to(self.device)
         mask = input.data.m.to(self.device)
-        self.mask = mask[:, 0, :, :].unsqueeze(1)
+        self.mask = mask[0, :, :].unsqueeze(1)
         self.paths = input.paths
 
         # Real data
