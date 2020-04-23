@@ -70,14 +70,14 @@ if __name__ == "__main__":
     val_iter = iter(val_loader)
 
     test_display_images = [
-        Dict(val_iter.next()) for i in range(opts.comet.display_size)
+        Dict(val_loader.dataset[i]) for i in range(opts.comet.display_size)
     ]
-
+    print(Dict(val_loader.dataset[0]).data.x.shape)
     if opts.train.save_im:
-        train_iter = iter(train_loader)
         train_display_images = [
-            Dict(val_iter.next()) for i in range(opts.comet.display_size)
+            Dict(train_loader.dataset[i]) for i in range(opts.comet.display_size)
         ]
+
     print("ok.")
 
     # --------------------------

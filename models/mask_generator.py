@@ -298,13 +298,25 @@ class MaskGenerator(BaseModel):
         self.optimizer_D_P.zero_grad()
         self.backward_D_P(curr_iter)
         self.optimizer_D_P_step()
+    
+    def set_input_display(self, input):
+        #for image log
+        # Sim data
+        self.image = input.data.x.unsqueeze(0).to(self.device)
+        self.mask = input.data.m.unsqueeze(0).to(self.device)
+        self.paths = input.paths
 
+        # Real data
+        self.r_im = input.data.rx.to(self.device).unsqueeze(0)
+        self.r_mask = input.data.rm.to(self.device).unsqueeze(0)
+    
+    
     def save_test_images(self, test_display_data, curr_iter, is_test=True):
         st = time()
         overlay = self.overlay
         save_images = []
         for i in range(len(test_display_data)):
-            self.set_input(test_display_data[i])
+            self.set_input_display(test_display_data[i])
             self.test()
             save_images.append(self.image[0])
             # Overlay mask:
@@ -329,7 +341,7 @@ class MaskGenerator(BaseModel):
 
         for i in range(len(test_display_data)):
             # Append real masks (overlayed and itself):
-            self.set_input(test_display_data[i])
+            self.set_input_display(test_display_data[i])
             self.test()
             save_images.append(self.r_im[0])
             save_real_mask_seg = (
