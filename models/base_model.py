@@ -61,7 +61,10 @@ class BaseModel:
 
     def optimize_parameters(self):
         pass
-
+    
+    def resume(self):
+        pass 
+        
     # update learning rate (called once every epoch)
     def update_learning_rate(self):
         """

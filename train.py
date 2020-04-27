@@ -91,7 +91,9 @@ if __name__ == "__main__":
     # ---------------------------
     # -----  Miscellaneous  -----
     # ---------------------------
-    total_steps = 0
+    total_steps = opts.train.load_iter if opts.train.resume_checkpoint else 0
+
+    
     times = deque([0], maxlen=100)
     model_times = deque([0], maxlen=100)
     batch_size = opts.data.loaders.batch_size
