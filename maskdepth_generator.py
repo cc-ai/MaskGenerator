@@ -1,4 +1,3 @@
-import os
 import torch
 import itertools
 from .base_model import BaseModel
@@ -104,6 +103,7 @@ class MaskGenerator(BaseModel):
     def set_input(self, input):
         # Sim data
         self.image = input.data.x.to(self.device)
+        self.depth = 
         mask = input.data.m.to(self.device)
         self.mask = mask[:, 0, :, :].unsqueeze(1)
         self.paths = input.paths
@@ -299,9 +299,9 @@ class MaskGenerator(BaseModel):
         self.optimizer_D_P.zero_grad()
         self.backward_D_P(curr_iter)
         self.optimizer_D_P_step()
-
+    
     def set_input_display(self, input):
-        # for image log
+        #for image log
         # Sim data
         self.image = input.data.x.unsqueeze(0).to(self.device)
         self.mask = input.data.m.unsqueeze(0).to(self.device)
@@ -310,7 +310,8 @@ class MaskGenerator(BaseModel):
         # Real data
         self.r_im = input.data.rx.to(self.device).unsqueeze(0)
         self.r_mask = input.data.rm.to(self.device).unsqueeze(0)
-
+    
+    
     def save_test_images(self, test_display_data, curr_iter, is_test=True):
         st = time()
         overlay = self.overlay
@@ -365,50 +366,3 @@ class MaskGenerator(BaseModel):
         )
 
         return time() - st
-
-    def save_models(self, epoch):
-        print("save models")  # TODO: save checkpoints
-        save_filename = "%s_maskgen.pth" % (epoch)
-        save_path = os.path.join(self.save_dir, save_filename)
-        save_dict = {}
-        for name in self.model_names:
-            if isinstance(name, str):
-                save_dict["net_%s" % (name)] = getattr(self, "net" + name).state_dict()
-                save_dict["optimizer_%s" % (name)] = getattr(
-                    self, "optimizer_" + name
-                ).state_dict()
-        save_dict["epoch"] = epoch
-
-        # if self.use_gpu and torch.cuda.is_available():
-        torch.save(save_dict, save_path)
-        # else:
-        #    torch.save(save_dict.cpu().state_dict(), save_path)
-
-    # load models from the disk
-    def load_models(self, epoch):
-        load_filename = "%s_maskgen.pth" % (epoch)
-        load_path = os.path.join(self.save_dir, load_filename)
-        models = torch.load(load_pth)
-        for name in self.model_names:
-            if isinstance(name, str):
-                net = getattr(self, "net" + name)
-                if isinstance(net, torch.nn.DataParallel):
-                    net = net.module
-                print("loading the model from %s" % load_path)
-                state_dict = models["net_" + name]
-                if hasattr(state_dict, "_metadata"):
-                    del state_dict._metadata
-                # patch InstanceNorm checkpoints prior to 0.4
-                for key in list(
-                    state_dict.keys()
-                ):  # need to copy keys here because we mutate in loop
-                    self.__patch_instance_norm_state_dict(
-                        state_dict, net, key.split(".")
-                    )
-                net.load_state_dict(state_dict, map_location=str(self.device))
-
-                opt = getattr(self, "optimizer_" + name)
-                print("loading the optimizer from %s" % load_path)
-                opt.load_state_dict(
-                    models["optimizer_" + name], map_location=str(self.device)
-                )

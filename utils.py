@@ -273,7 +273,7 @@ def get_model_list(dirname, key):
     gen_models = [
         os.path.join(dirname, f)
         for f in os.listdir(dirname)
-        if os.path.isfile(os.path.join(dirname, f)) and key in f and ".pt" in f
+        if os.path.isfile(os.path.join(dirname, f)) and key in f and ".pth" in f
     ]
     if gen_models is None:
         return None
