@@ -325,3 +325,23 @@ def get_normalized_depth(image_path, mode="unity"):
         return normalize(depth)
     else:
         print("depth mode not supported")
+def get_model_list(dirname, key):
+    """get last model in dirname, whose name contain key
+    Arguments:
+        dirname {str} -- directory name
+        key {str} -- "key" in the model name
+    Returns:
+        last_model_name {str} -- last model name
+    """
+    if os.path.exists(dirname) is False:
+        return None
+    gen_models = [
+        os.path.join(dirname, f)
+        for f in os.listdir(dirname)
+        if os.path.isfile(os.path.join(dirname, f)) and key in f and ".pth" in f
+    ]
+    if not gen_models:
+        return None
+    gen_models.sort()
+    last_model_name = gen_models[-1]
+    return last_model_name

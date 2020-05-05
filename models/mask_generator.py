@@ -1,3 +1,4 @@
+import os
 import torch
 import itertools
 from .base_model import BaseModel
@@ -298,9 +299,9 @@ class MaskGenerator(BaseModel):
         self.optimizer_D_P.zero_grad()
         self.backward_D_P(curr_iter)
         self.optimizer_D_P_step()
-    
+
     def set_input_display(self, input):
-        #for image log
+        # for image log
         # Sim data
         self.image = input.data.x.unsqueeze(0).to(self.device)
         self.mask = input.data.m.unsqueeze(0).to(self.device)
@@ -309,8 +310,7 @@ class MaskGenerator(BaseModel):
         # Real data
         self.r_im = input.data.rx.to(self.device).unsqueeze(0)
         self.r_mask = input.data.rm.to(self.device).unsqueeze(0)
-    
-    
+
     def save_test_images(self, test_display_data, curr_iter, is_test=True):
         st = time()
         overlay = self.overlay
@@ -365,3 +365,5 @@ class MaskGenerator(BaseModel):
         )
 
         return time() - st
+
+ 

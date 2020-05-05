@@ -69,13 +69,18 @@ if __name__ == "__main__":
     print("Creating display images...", end="", flush=True)
     val_iter = iter(val_loader)
 
+    if type(opts.comet.display_size) == int:
+        display_indices = range(opts.comet.display_size)
+    else:
+        display_indices = opts.comet.display_size
+    
     test_display_images = [
-        Dict(val_loader.dataset[i]) for i in range(opts.comet.display_size)
+        Dict(val_loader.dataset[i]) for i in display_indices
     ]
     print(Dict(val_loader.dataset[0]).data.x.shape)
     if opts.train.save_im:
         train_display_images = [
-            Dict(train_loader.dataset[i]) for i in range(opts.comet.display_size)
+            Dict(train_loader.dataset[i]) for i in display_indices)
         ]
 
     print("ok.")
@@ -91,7 +96,10 @@ if __name__ == "__main__":
     # ---------------------------
     # -----  Miscellaneous  -----
     # ---------------------------
-    total_steps = 0
+    total_steps = opts.train.load_iter if opts.train.resume_checkpoint else 0
+    #if opts.train.resume_checkpoint:
+    #    model.load_models(opts.train.resume_ckpt_dir)
+    
     times = deque([0], maxlen=100)
     model_times = deque([0], maxlen=100)
     batch_size = opts.data.loaders.batch_size
@@ -107,7 +115,7 @@ if __name__ == "__main__":
     s = "Starting training for {} epochs of {} updates with batch size {}, "
     s += "{} test inferences per epoch."
     print(s.format(opts.train.epochs, len(train_loader), batch_size, tpe))
-
+    
     for epoch in range(opts.train.epochs):
         print(f"Epoch {epoch}: ")
         comet_exp.log_metric("epoch", epoch, step=total_steps)
@@ -140,5 +148,5 @@ if __name__ == "__main__":
 
         print("saving (epoch %d, total_steps %d)" % (epoch, total_steps))
         save_suffix = "iter_%d" % total_steps
-        model.save_networks(save_suffix)
+        model.save_models(save_suffix)
         # model.update_learning_rate()
