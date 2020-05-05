@@ -275,7 +275,7 @@ def get_model_list(dirname, key):
         for f in os.listdir(dirname)
         if os.path.isfile(os.path.join(dirname, f)) and key in f and ".pth" in f
     ]
-    if gen_models is None:
+    if not gen_models:
         return None
     gen_models.sort()
     last_model_name = gen_models[-1]
