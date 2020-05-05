@@ -4,7 +4,7 @@
 data:
   use_real: true
   files: # if one is not none it will override the dirs location
-    base: "/network/tmp1/ccai/data/mask_generation/11K" # ! Check output_dir
+    base: "/network/tmp1/ccai/data/mask_generation/WD" # ! Check output_dir
     train: train.json
     val: test.json
 
@@ -117,7 +117,7 @@ model:
 
 comet:
   workspace: "melisandeteng"
-  project_name: "mask-generator"
+  project_name: "FloodMasks"
   exp: None #Will be defined in train.py
   display_size: 5 #Num images to display (will take the x first ones) or list of indices of images to take
 
@@ -129,11 +129,13 @@ train:
   lambdas: # scaling factors in the total loss
   log_level: 1 # 0: no log, 1: only aggregated losses, >1 detailed losses
   print_freq: 1
-  output_dir: "/network/tmp1/ccai/data/mask_generation/output_files/11K_wgan_feature_pixelDA"
+  output_dir: '/network/tmp1/ccai/data/mask_generation/output_files/wgan_feature_pixelDA_WD_newsave'
+
   save_im: True
   save_freq: 20000
-  resume_checkpoint: false
-  load_iter: 500000
+  resume_checkpoint: True
+  resume_ckpt_dir: '/network/tmp1/ccai/data/mask_generation/output_files/wgan_feature_pixelDA_WD_newsave/checkpoints/iter_146300_maskgen.pth'
+  load_iter: 146300
   tests_per_epoch: 4
 
 # -----------------------------
