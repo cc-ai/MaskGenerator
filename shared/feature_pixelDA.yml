@@ -136,9 +136,9 @@ train:
   output_dir: '/network/tmp1/ccai/data/mask_generation/output_files/wgan_feature_pixelDA_WD_newsave'
   save_im: True
   save_freq: 20000
-  resume_checkpoint: False
-  resume_ckpt_dir: '/network/tmp1/ccai/data/mask_generation/output_files/wgan_feature_pixelDA_WD_newsave/'
-  load_iter: 213180
+  resume_checkpoint: True
+  resume_ckpt_dir: '/network/tmp1/ccai/data/mask_generation/output_files/wgan_feature_pixelDA_WD_newsave/checkpoints/iter_146300_maskgen.pth'
+  load_iter: 146300
   tests_per_epoch: 4
 
 

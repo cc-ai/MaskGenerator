@@ -92,8 +92,8 @@ if __name__ == "__main__":
     # -----  Miscellaneous  -----
     # ---------------------------
     total_steps = opts.train.load_iter if opts.train.resume_checkpoint else 0
-    if opts.train.resume_checkpoint:
-        model.load_models(opts.train.resume_ckpt_dir)
+    #if opts.train.resume_checkpoint:
+    #    model.load_models(opts.train.resume_ckpt_dir)
     
     times = deque([0], maxlen=100)
     model_times = deque([0], maxlen=100)
