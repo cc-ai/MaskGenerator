@@ -69,13 +69,18 @@ if __name__ == "__main__":
     print("Creating display images...", end="", flush=True)
     val_iter = iter(val_loader)
 
+    if type(opts.comet.display_size) == int:
+        display_indices = range(opts.comet.display_size)
+    else:
+        display_indices = opts.comet.display_size
+    
     test_display_images = [
-        Dict(val_loader.dataset[i]) for i in range(opts.comet.display_size)
+        Dict(val_loader.dataset[i]) for i in display_indices
     ]
     print(Dict(val_loader.dataset[0]).data.x.shape)
     if opts.train.save_im:
         train_display_images = [
-            Dict(train_loader.dataset[i]) for i in range(opts.comet.display_size)
+            Dict(train_loader.dataset[i]) for i in display_indices)
         ]
 
     print("ok.")
