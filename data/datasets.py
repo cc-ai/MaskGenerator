@@ -231,7 +231,7 @@ def get_loader(opts, real=True, depth=True, no_check=False):
                 RealSimDepthDataset(
                     opts,
                     transform=transforms.Compose(get_transforms(Dict(opts))),
-                    no_check=no_check
+                    no_check=no_check,
                 ),
                 batch_size=opts.data.loaders.get("batch_size", 4),
                 shuffle=True,
@@ -242,7 +242,7 @@ def get_loader(opts, real=True, depth=True, no_check=False):
                 RealSimDataset(
                     opts,
                     transform=transforms.Compose(get_transforms(Dict(opts))),
-                    no_check=no_check
+                    no_check=no_check,
                 ),
                 batch_size=opts.data.loaders.get("batch_size", 4),
                 shuffle=True,
@@ -254,7 +254,7 @@ def get_loader(opts, real=True, depth=True, no_check=False):
                 SimDepthDataset(
                     opts,
                     transform=transforms.Compose(get_transforms(Dict(opts))),
-                    no_check=no_check
+                    no_check=no_check,
                 ),
                 batch_size=opts.data.loaders.get("batch_size", 4),
                 shuffle=True,
@@ -265,7 +265,7 @@ def get_loader(opts, real=True, depth=True, no_check=False):
                 SimDataset(
                     opts,
                     transform=transforms.Compose(get_transforms(Dict(opts))),
-                    no_check=no_check
+                    no_check=no_check,
                 ),
                 batch_size=opts.data.loaders.get("batch_size", 4),
                 shuffle=True,
