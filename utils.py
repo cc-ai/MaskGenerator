@@ -325,6 +325,7 @@ def get_normalized_depth(image_path, mode="unity"):
         return normalize(depth)
     else:
         print("depth mode not supported")
+        
 def get_model_list(dirname, key):
     """get last model in dirname, whose name contain key
     Arguments:
