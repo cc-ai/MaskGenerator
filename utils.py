@@ -309,23 +309,22 @@ def normalize(arr, min_val=-1, max_val=1):
     ) + min_val
 
 
-def get_normalized_depth(image_path, mode="unity"):
+def get_normalized_depth(image_array, mode="unity"):
     """ 
     Args:
-        image_path (str): path to image file
+        image_array (np.array): np.array of depth map
         mode (str) : "unity" if depth maps come from our simulated world
                     "megadepth" if they were computed with megadepth model
     """
-    img = Image.open(image_path)
     if mode == "unity":
-        depth = convert_depth_unity(np.array(img), far=1000)
+        depth = convert_depth_unity(np.array(image_array), far=1000)
         return normalize(depth)
     elif mode == "megadepth":
-        depth = convert_depth_megadepth(np.array(img))
+        depth = convert_depth_megadepth(np.array(image_array))
         return normalize(depth)
     else:
         print("depth mode not supported")
-        
+
 def get_model_list(dirname, key):
     """get last model in dirname, whose name contain key
     Arguments:

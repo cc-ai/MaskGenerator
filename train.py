@@ -64,8 +64,8 @@ if __name__ == "__main__":
     print("Creating loaders:")
     # ! important to do test first
     val_opt = set_mode("test", opts)
-    val_loader = get_loader(val_opt, real=True, no_check=args.no_check)
-    train_loader = get_loader(opts, real=True, no_check=args.no_check)
+    val_loader = get_loader(val_opt, real=True, depth = opts.data.use_depth, no_check=args.no_check)
+    train_loader = get_loader(opts, real=True,  depth = opts.data.use_depth, no_check=args.no_check)
     print("Creating display images...", end="", flush=True)
     val_iter = iter(val_loader)
 
@@ -91,6 +91,7 @@ if __name__ == "__main__":
     print("Creating Model:")
     opts.comet.exp = comet_exp
     if opts.data.use_depth:
+        print("USing depth")
         model: MaskDepthGenerator = create_model(opts)
     else: 
         model: MaskGenerator = create_model(opts)

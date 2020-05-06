@@ -229,44 +229,49 @@ def get_loader(opts, real=True, depth=True, no_check=False):
         if depth is True:
             return DataLoader(
                 RealSimDepthDataset(
-                    opts, transform=transforms.Compose(get_transforms(Dict(opts)))
+                    opts,
+                    transform=transforms.Compose(get_transforms(Dict(opts))),
+                    no_check=no_check
                 ),
                 batch_size=opts.data.loaders.get("batch_size", 4),
                 shuffle=True,
                 num_workers=opts.data.loaders.get("num_workers", 8),
-                no_check=no_check,
             )
         else:
             return DataLoader(
                 RealSimDataset(
-                    opts, transform=transforms.Compose(get_transforms(Dict(opts)))
+                    opts,
+                    transform=transforms.Compose(get_transforms(Dict(opts))),
+                    no_check=no_check
                 ),
                 batch_size=opts.data.loaders.get("batch_size", 4),
                 shuffle=True,
                 num_workers=opts.data.loaders.get("num_workers", 8),
-                no_check=no_check,
             )
     else:
         if depth is True:
             return DataLoader(
                 SimDepthDataset(
-                    opts, transform=transforms.Compose(get_transforms(Dict(opts)))
+                    opts,
+                    transform=transforms.Compose(get_transforms(Dict(opts))),
+                    no_check=no_check
                 ),
                 batch_size=opts.data.loaders.get("batch_size", 4),
                 shuffle=True,
                 num_workers=opts.data.loaders.get("num_workers", 8),
-                no_check=no_check,
             )
         else:
             return DataLoader(
                 SimDataset(
-                    opts, transform=transforms.Compose(get_transforms(Dict(opts)))
+                    opts,
+                    transform=transforms.Compose(get_transforms(Dict(opts))),
+                    no_check=no_check
                 ),
                 batch_size=opts.data.loaders.get("batch_size", 4),
                 shuffle=True,
                 num_workers=opts.data.loaders.get("num_workers", 8),
-                no_check=no_check,
             )
+
 
 class RealSimDepthDataset(Dataset):
     def __init__(self, opts, transform=None, no_check=False):
@@ -347,35 +352,24 @@ class RealSimDepthDataset(Dataset):
             datadict["rd"] = get_normalized_depth(
                 np.array(datadict["d"]), mode=self.opts.data.depth.real_mode
             )
-            return Dict(
-                {
-                    "data": datadict
-                    ,
-                    "paths": paths,
-                }
-            )
+            return Dict({"data": datadict, "paths": paths})
         datadict = self.transform(
-                {task: pil_image_loader(path, task) for task, path in paths.items()}
-            )
-        datadict["d"] = get_normalized_depth(
-                np.array(datadict["d"]), mode=self.opts.depth.sim_mode
-            )
-        datadict["rd"] = get_normalized_depth(
-                np.array(datadict["d"]), mode=self.opts.depth.real_mode
-            )
-        return Dict(
-            {
-                "data": datadict,
-                "paths": paths,
-            }
+            {task: pil_image_loader(path, task) for task, path in paths.items()}
         )
+        datadict["d"] = get_normalized_depth(
+            np.array(datadict["d"]), mode=self.opts.depth.sim_mode
+        )
+        datadict["rd"] = get_normalized_depth(
+            np.array(datadict["d"]), mode=self.opts.depth.real_mode
+        )
+        return Dict({"data": datadict, "paths": paths})
 
     def __len__(self):
         return len(self.samples_paths)
 
 
 class SimDepthDataset(Dataset):
-    def __init__(self, opts, transform=None):
+    def __init__(self, opts, transform=None, no_check=False):
 
         isTrain = opts.model.is_train
         if isTrain:
@@ -390,7 +384,8 @@ class SimDepthDataset(Dataset):
         else:
             raise ValueError("Unknown file list type in {}".format(file_list_path))
 
-        self.check_samples()
+        if not no_check:
+            self.check_samples()
         self.file_list_path = str(file_list_path)
         self.transform = transform
         self.opts = opts
@@ -436,25 +431,16 @@ class SimDepthDataset(Dataset):
             datadict["d"] = get_normalized_depth(
                 np.array(datadict["d"]), mode=self.opts.depth.sim_mode
             )
-            
-            return Dict(
-                {
-                    "data": datadict,
-                    "paths": paths,
-                }
-            )
+
+            return Dict({"data": datadict, "paths": paths})
         datadict = self.transform(
-                {task: pil_image_loader(path, task) for task, path in paths.items()}
-            )
-        datadict["d"] = get_normalized_depth(
-                np.array(datadict["d"]), mode=self.opts.depth.sim_mode
-            )
-        
-        return Dict(
-            {
-                "data": datadict,
-                "paths": paths,
-            }
+            {task: pil_image_loader(path, task) for task, path in paths.items()}
         )
+        datadict["d"] = get_normalized_depth(
+            np.array(datadict["d"]), mode=self.opts.depth.sim_mode
+        )
+
+        return Dict({"data": datadict, "paths": paths})
+
     def __len__(self):
         return len(self.samples_paths)
