@@ -16,7 +16,7 @@ from data.datasets import get_loader
 from collections import deque
 import argparse
 from models.mask_generator import MaskGenerator
-
+from models.mask_depth_generator import MaskDepthGenerator
 
 if __name__ == "__main__":
     # -----------------------------
@@ -90,7 +90,10 @@ if __name__ == "__main__":
     # --------------------------
     print("Creating Model:")
     opts.comet.exp = comet_exp
-    model: MaskGenerator = create_model(opts)
+    if opts.data.use_depth:
+        model: MaskDepthGenerator = create_model(opts)
+    else: 
+        model: MaskGenerator = create_model(opts)
     model.setup()
 
     # ---------------------------

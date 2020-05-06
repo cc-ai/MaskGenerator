@@ -8,6 +8,7 @@ import numpy as np
 from .transforms import get_transforms
 from PIL import Image
 from addict import Dict
+from utils import get_normalized_depth
 
 IMG_EXTENSIONS = set(
     [".jpg", ".JPG", ".jpeg", ".JPEG", ".png", ".PNG", ".ppm", ".PPM", ".bmp", ".BMP"]
@@ -99,16 +100,9 @@ def pil_image_loader(path, task):
     if Path(path).suffix == ".npy":
         arr = np.load(path).astype(np.uint8)
     elif is_image_file(path):
-        if task == "d":
-            arr = np.array(Image.open(path))
-        else:
-            arr = imread(path).astype(np.uint8)
+        arr = imread(path).astype(np.uint8)
     else:
         raise ValueError("Unknown data type {}".format(path))
-
-    if task == "d" or task == "rd":
-        arr = arr.astype(np.uint8)
-    #    arr[arr != 0] = 1 / arr[arr != 0]
     if task == "m" or task == "rm":
         # Check if >1 channel:
         if len(arr.shape) > 2 and arr.shape[-1] > 1:
@@ -117,7 +111,6 @@ def pil_image_loader(path, task):
 
     # if task == "s":
     #     arr = decode_segmap(arr)
-
     # assert len(arr.shape) == 3, (path, task, arr.shape)
 
     return Image.fromarray(arr)
@@ -231,12 +224,13 @@ class RealSimDataset(Dataset):
         return len(self.samples_paths)
 
 
-
-def get_loader(opts, real=True, depth= True, no_check= False):
+def get_loader(opts, real=True, depth=True, no_check=False):
     if real:
-        if depth == True:
+        if depth is True:
             return DataLoader(
-                RealSimDepthDataset(opts, transform=transforms.Compose(get_transforms(Dict(opts)))),
+                RealSimDepthDataset(
+                    opts, transform=transforms.Compose(get_transforms(Dict(opts)))
+                ),
                 batch_size=opts.data.loaders.get("batch_size", 4),
                 shuffle=True,
                 num_workers=opts.data.loaders.get("num_workers", 8),
@@ -244,16 +238,20 @@ def get_loader(opts, real=True, depth= True, no_check= False):
             )
         else:
             return DataLoader(
-                RealSimDataset(opts, transform=transforms.Compose(get_transforms(Dict(opts)))),
+                RealSimDataset(
+                    opts, transform=transforms.Compose(get_transforms(Dict(opts)))
+                ),
                 batch_size=opts.data.loaders.get("batch_size", 4),
                 shuffle=True,
                 num_workers=opts.data.loaders.get("num_workers", 8),
                 no_check=no_check,
             )
     else:
-        if depth == True:
+        if depth is True:
             return DataLoader(
-                SimDepthDataset(opts, transform=transforms.Compose(get_transforms(Dict(opts)))),
+                SimDepthDataset(
+                    opts, transform=transforms.Compose(get_transforms(Dict(opts)))
+                ),
                 batch_size=opts.data.loaders.get("batch_size", 4),
                 shuffle=True,
                 num_workers=opts.data.loaders.get("num_workers", 8),
@@ -261,14 +259,14 @@ def get_loader(opts, real=True, depth= True, no_check= False):
             )
         else:
             return DataLoader(
-                SimDataset(opts, transform=transforms.Compose(get_transforms(Dict(opts)))),
+                SimDataset(
+                    opts, transform=transforms.Compose(get_transforms(Dict(opts)))
+                ),
                 batch_size=opts.data.loaders.get("batch_size", 4),
                 shuffle=True,
                 num_workers=opts.data.loaders.get("num_workers", 8),
                 no_check=no_check,
             )
-
-
 
 class RealSimDepthDataset(Dataset):
     def __init__(self, opts, transform=None):
@@ -334,27 +332,46 @@ class RealSimDepthDataset(Dataset):
         paths = self.samples_paths[i]
         paths["rx"] = self.real_samples_paths[real_i]["x"]
         paths["rm"] = self.real_samples_paths[real_i]["m"]
-       # paths["rd"] = self.real_samples_paths[real_i]["d"]
+        paths["rd"] = self.real_samples_paths[real_i]["d"]
 
         if self.transform:
+            # first perform transform on input images and then convert depth image
+            # to depth array
+            datadict = self.transform(
+                {task: pil_image_loader(path, task) for task, path in paths.items()}
+            )
+            datadict["d"] = get_normalized_depth(
+                np.array(datadict["d"]), mode=self.opts.data.depth.sim_mode
+            )
+            datadict["rd"] = get_normalized_depth(
+                np.array(datadict["d"]), mode=self.opts.data.depth.real_mode
+            )
             return Dict(
                 {
-                    "data": self.transform(
-                        {task: pil_image_loader(path, task) for task, path in paths.items()}
-                    ),
+                    "data": datadict
+                    ,
                     "paths": paths,
                 }
             )
-
+         datadict = self.transform(
+                {task: pil_image_loader(path, task) for task, path in paths.items()}
+            )
+        datadict["d"] = get_normalized_depth(
+                np.array(datadict["d"]), mode=self.opts.depth.sim_mode
+            )
+        datadict["rd"] = get_normalized_depth(
+                np.array(datadict["d"]), mode=self.opts.depth.real_mode
+            )
         return Dict(
             {
-                "data": {task: pil_image_loader(path, task) for task, path in paths.items()},
+                "data": datadict,
                 "paths": paths,
             }
         )
 
     def __len__(self):
         return len(self.samples_paths)
+
 
 class SimDepthDataset(Dataset):
     def __init__(self, opts, transform=None):
@@ -406,23 +423,38 @@ class SimDepthDataset(Dataset):
             dict: dataset item where tensors of data are in item["data"] which is a dict
                   {task: tensor}
         """
+
+        real_i = i % len(self.real_samples_paths) - 1
         paths = self.samples_paths[i]
+
         if self.transform:
+            # first perform transform on input images and then convert depth image to depth array
+            datadict = self.transform(
+                {task: pil_image_loader(path, task) for task, path in paths.items()}
+            )
+            datadict["d"] = get_normalized_depth(
+                np.array(datadict["d"]), mode=self.opts.depth.sim_mode
+            )
+            
             return Dict(
                 {
-                    "data": self.transform(
-                        {task: pil_image_loader(path, task) for task, path in paths.items()}
+                    "data": datadict
                     ),
                     "paths": paths,
                 }
             )
-
+         datadict = self.transform(
+                {task: pil_image_loader(path, task) for task, path in paths.items()}
+            )
+        datadict["d"] = get_normalized_depth(
+                np.array(datadict["d"]), mode=self.opts.depth.sim_mode
+            )
+        
         return Dict(
             {
-                "data": {task: pil_image_loader(path, task) for task, path in paths.items()},
+                "data": datadict,
                 "paths": paths,
             }
         )
-
     def __len__(self):
         return len(self.samples_paths)
