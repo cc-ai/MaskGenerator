@@ -269,7 +269,7 @@ def get_loader(opts, real=True, depth=True, no_check=False):
             )
 
 class RealSimDepthDataset(Dataset):
-    def __init__(self, opts, transform=None):
+    def __init__(self, opts, transform=None, no_check=False):
 
         isTrain = opts.model.is_train
         if isTrain:
@@ -288,7 +288,8 @@ class RealSimDepthDataset(Dataset):
         else:
             raise ValueError("Unknown file list type in {}".format(file_list_path))
 
-        self.check_samples()
+        if not no_check:
+            self.check_samples()
         self.file_list_path = str(file_list_path)
         self.real_file_list_path = str(real_file_list_path)
         self.transform = transform
@@ -353,7 +354,7 @@ class RealSimDepthDataset(Dataset):
                     "paths": paths,
                 }
             )
-         datadict = self.transform(
+        datadict = self.transform(
                 {task: pil_image_loader(path, task) for task, path in paths.items()}
             )
         datadict["d"] = get_normalized_depth(
@@ -438,12 +439,11 @@ class SimDepthDataset(Dataset):
             
             return Dict(
                 {
-                    "data": datadict
-                    ),
+                    "data": datadict,
                     "paths": paths,
                 }
             )
-         datadict = self.transform(
+        datadict = self.transform(
                 {task: pil_image_loader(path, task) for task, path in paths.items()}
             )
         datadict["d"] = get_normalized_depth(
