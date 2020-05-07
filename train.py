@@ -67,7 +67,6 @@ if __name__ == "__main__":
     val_loader = get_loader(val_opt, real=True, depth = opts.data.use_depth, no_check=args.no_check)
     train_loader = get_loader(opts, real=True,  depth = opts.data.use_depth, no_check=args.no_check)
     print("Creating display images...", end="", flush=True)
-    val_iter = iter(val_loader)
 
     if type(opts.comet.display_size) == int:
         display_indices = range(opts.comet.display_size)

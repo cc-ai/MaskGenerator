@@ -1,4 +1,3 @@
-import os
 import torch
 import itertools
 from .base_model import BaseModel
@@ -6,7 +5,7 @@ from . import networks
 from utils import write_images
 from time import time
 from ExtraAdam import ExtraAdam
-import numpy as np
+
 
 class MaskDepthGenerator(BaseModel):
     def name(self):
@@ -103,9 +102,13 @@ class MaskDepthGenerator(BaseModel):
 
     def set_input(self, input):
         # Sim data
-        
+
         self.input = torch.cat(
-            [input.data.x.to(self.device), input.data.d.type(torch.FloatTensor).to(self.device)], dim=1
+            [
+                input.data.x.to(self.device),
+                input.data.d.type(torch.FloatTensor).to(self.device),
+            ],
+            dim=1,
         )
         self.image = input.data.x.to(self.device)
         mask = input.data.m.to(self.device)
@@ -114,7 +117,11 @@ class MaskDepthGenerator(BaseModel):
 
         # Real data
         self.r_input = torch.cat(
-            [input.data.rx.to(self.device), input.data.rd.type(torch.FloatTensor).to(self.device)], dim=1
+            [
+                input.data.rx.to(self.device),
+                input.data.rd.type(torch.FloatTensor).to(self.device),
+            ],
+            dim=1,
         )
         self.r_im = input.data.rx.to(self.device)
         self.r_mask = input.data.rm.to(self.device)  # From segmentation, or whatever
@@ -308,7 +315,6 @@ class MaskDepthGenerator(BaseModel):
         self.optimizer_D_P_step()
 
     def normalize_depth_display(self, depth):
-        print(depth)
         n_depth = (depth - min(depth)) / (max(depth) - min(depth))
         return 255 * n_depth
 
@@ -316,69 +322,73 @@ class MaskDepthGenerator(BaseModel):
         # for image log
         # Sim data
         self.image = input.data.x.unsqueeze(0).to(self.device)
-        self.depth = self.normalize_depth_display(input.data.d).unsqueeze(0).to(self.device)
-    
+        self.depth = (
+            self.normalize_depth_display(input.data.d).unsqueeze(0).to(self.device)
+        )
+
         self.mask = input.data.m.unsqueeze(0).to(self.device)
         self.paths = input.paths
 
         # Real data
         self.r_im = input.data.rx.unsqueeze(0).to(self.device)
-        self.r_depth = self.normalize_depth_display(input.data.rd).unsqueeze(0).to(self.device)
+        self.r_depth = (
+            self.normalize_depth_display(input.data.rd).unsqueeze(0).to(self.device)
+        )
 
         self.r_mask = input.data.rm.unsqueeze(0).to(self.device)
 
     def save_test_images(self, test_display_data, curr_iter, is_test=True):
-            st = time()
-            overlay = self.overlay
-            save_images = []
-            for i in range(len(test_display_data)):
-                self.set_input_display(test_display_data[i])
-                self.test()
-                save_images.append(self.image[0])
-                # Overlay mask:
-                save_mask = (
-                    self.image[0]
-                    - (self.image[0] * self.mask[0].repeat(3, 1, 1))
-                    + self.mask[0].repeat(3, 1, 1)
-                )
-
-                save_fake_mask = (
-                    self.image[0]
-                    - (self.image[0] * self.fake_mask[0].repeat(3, 1, 1))
-                    + self.fake_mask[0].repeat(3, 1, 1)
-                )
-
-                if overlay:
-                    save_images.append(save_mask)
-                    save_images.append(save_fake_mask)
-                else:
-                    save_images.append(self.mask[0].repeat(3, 1, 1))
-                    save_images.append(self.fake_mask[0].repeat(3, 1, 1))
-
-            for i in range(len(test_display_data)):
-                # Append real masks (overlayed and itself):
-                self.set_input_display(test_display_data[i])
-                self.test()
-                save_images.append(self.r_im[0])
-                save_real_mask_seg = (
-                    self.r_im[0]
-                    - (self.r_im[0] * self.r_mask[0].repeat(3, 1, 1))
-                    + self.r_mask[0].repeat(3, 1, 1)
-                )
-                save_real_mask = (
-                    self.r_im[0]
-                    - (self.r_im[0] * self.r_fake_mask[0].repeat(3, 1, 1))
-                    + self.r_fake_mask[0].repeat(3, 1, 1)
-                )
-                save_images.append(save_real_mask_seg)
-                save_images.append(save_real_mask)
-            write_images(
-                save_images,
-                curr_iter,
-                comet_exp=self.comet_exp,
-                store_im=self.store_image,
-                is_test=is_test,
+        st = time()
+        overlay = self.overlay
+        save_images = []
+        for i in range(len(test_display_data)):
+            self.set_input_display(test_display_data[i])
+            self.test()
+            save_images.append(self.image[0])
+            # Overlay mask:
+            save_mask = (
+                self.image[0]
+                - (self.image[0] * self.mask[0].repeat(3, 1, 1))
+                + self.mask[0].repeat(3, 1, 1)
             )
 
-            return time() - st
+            save_fake_mask = (
+                self.image[0]
+                - (self.image[0] * self.fake_mask[0].repeat(3, 1, 1))
+                + self.fake_mask[0].repeat(3, 1, 1)
+            )
+
+            if overlay:
+                save_images.append(save_mask)
+                save_images.append(save_fake_mask)
+            else:
+                save_images.append(self.mask[0].repeat(3, 1, 1))
+                save_images.append(self.fake_mask[0].repeat(3, 1, 1))
+
+        for i in range(len(test_display_data)):
+            # Append real masks (overlayed and itself):
+            self.set_input_display(test_display_data[i])
+            self.test()
+            save_images.append(self.r_im[0])
+            save_real_mask_seg = (
+                self.r_im[0]
+                - (self.r_im[0] * self.r_mask[0].repeat(3, 1, 1))
+                + self.r_mask[0].repeat(3, 1, 1)
+            )
+            save_real_mask = (
+                self.r_im[0]
+                - (self.r_im[0] * self.r_fake_mask[0].repeat(3, 1, 1))
+                + self.r_fake_mask[0].repeat(3, 1, 1)
+            )
+            save_images.append(save_real_mask_seg)
+            save_images.append(save_real_mask)
+        write_images(
+            save_images,
+            curr_iter,
+            comet_exp=self.comet_exp,
+            store_im=self.store_image,
+            is_test=is_test,
+        )
+
+        return time() - st
 

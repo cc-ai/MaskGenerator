@@ -339,7 +339,7 @@ class RealSimDepthDataset(Dataset):
         paths["rx"] = self.real_samples_paths[real_i]["x"]
         paths["rm"] = self.real_samples_paths[real_i]["m"]
         paths["rd"] = self.real_samples_paths[real_i]["d"]
-        
+
         if self.transform:
             # first perform transform on input images and then convert depth image
             # to depth array
@@ -347,10 +347,10 @@ class RealSimDepthDataset(Dataset):
                 {task: pil_image_loader(path, task) for task, path in paths.items()}
             )
             datadict["d"] = get_normalized_depth(
-                np.array(datadict["d"]), mode=self.opts.data.depth.sim_mode
+                datadict["d"], mode=self.opts.data.depth.sim_mode
             )
             datadict["rd"] = get_normalized_depth(
-                np.array(datadict["rd"]), mode=self.opts.data.depth.real_mode
+                datadict["rd"], mode=self.opts.data.depth.real_mode
             )
             return Dict({"data": datadict, "paths": paths})
         datadict = self.transform(
@@ -362,6 +362,7 @@ class RealSimDepthDataset(Dataset):
         datadict["rd"] = get_normalized_depth(
             np.array(datadict["rd"]), mode=self.opts.depth.real_mode
         )
+
         return Dict({"data": datadict, "paths": paths})
 
     def __len__(self):
