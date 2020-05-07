@@ -64,23 +64,23 @@ if __name__ == "__main__":
     print("Creating loaders:")
     # ! important to do test first
     val_opt = set_mode("test", opts)
-    val_loader = get_loader(val_opt, real=True, depth = opts.data.use_depth, no_check=args.no_check)
-    train_loader = get_loader(opts, real=True,  depth = opts.data.use_depth, no_check=args.no_check)
+    val_loader = get_loader(
+        val_opt, real=True, depth=opts.data.use_depth, no_check=args.no_check
+    )
+    train_loader = get_loader(
+        opts, real=True, depth=opts.data.use_depth, no_check=args.no_check
+    )
     print("Creating display images...", end="", flush=True)
 
     if type(opts.comet.display_size) == int:
         display_indices = range(opts.comet.display_size)
     else:
         display_indices = opts.comet.display_size
-    
-    test_display_images = [
-        Dict(val_loader.dataset[i]) for i in display_indices
-    ]
+
+    test_display_images = [Dict(val_loader.dataset[i]) for i in display_indices]
     print(Dict(val_loader.dataset[0]).data.x.shape)
     if opts.train.save_im:
-        train_display_images = [
-            Dict(train_loader.dataset[i]) for i in display_indices
-        ]
+        train_display_images = [Dict(train_loader.dataset[i]) for i in display_indices]
 
     print("ok.")
 
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     if opts.data.use_depth:
         print("Using depth")
         model: MaskDepthGenerator = create_model(opts)
-    else: 
+    else:
         model: MaskGenerator = create_model(opts)
     model.setup()
 
@@ -100,9 +100,9 @@ if __name__ == "__main__":
     # -----  Miscellaneous  -----
     # ---------------------------
     total_steps = opts.train.load_iter if opts.train.resume_checkpoint else 0
-    #if opts.train.resume_checkpoint:
+    # if opts.train.resume_checkpoint:
     #    model.load_models(opts.train.resume_ckpt_dir)
-    
+
     times = deque([0], maxlen=100)
     model_times = deque([0], maxlen=100)
     batch_size = opts.data.loaders.batch_size
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     s = "Starting training for {} epochs of {} updates with batch size {}, "
     s += "{} test inferences per epoch."
     print(s.format(opts.train.epochs, len(train_loader), batch_size, tpe))
-    
+
     for epoch in range(opts.train.epochs):
         print(f"Epoch {epoch}: ")
         comet_exp.log_metric("epoch", epoch, step=total_steps)
