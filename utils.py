@@ -285,28 +285,28 @@ def convert_depth_unity(im_array, far=1000):
     G = im_array[1, :, :]
     B = im_array[2, :, :]
 
-    R = ((247 - R) / 8).astype(float)
-    G = ((247 - G) / 8).astype(float)
-    B = (255 - B).astype(float)
-    depth = ((R * 256 * 31 + G * 256 + B).astype(float)) / (256 * 31 * 31 - 1)
-    return np.expand_dims(depth * far, 0)
+    R = ((247 - R) / 8).type(torch.FloatTensor)
+    G = ((247 - G) / 8).type(torch.FloatTensor)
+    B = (255 - B).type(torch.FloatTensor)
+    depth = ((R * 256 * 31 + G * 256 + B).type(torch.FloatTensor)) / (256 * 31 * 31 - 1)
+    return (depth * far).unsqueeze(0)
 
 
 def convert_depth_megadepth(im_array):
     """
-    im_array: PIL image of the depth map as np.array 
+    im_array: PIL image of the depth map as torch.Tensor
     The image obtained with megadepth is actually the inverse depth 
     """
-    assert np.all(im_array > 0), "MegaDepth depths > 0 "
-    return 1 / im_array
+    assert torch.Tensor.all(im_array > 0), "MegaDepth depths > 0 "
+    return (1 / im_array).type(torch.FloatTensor)
 
 
 def normalize(arr, min_val=-1, max_val=1):
     """
     Normalize between min and max
     """
-    return (max_val - min_val) * (arr - np.min(arr)) / (
-        np.max(arr) - np.min(arr)
+    return (max_val - min_val) * (arr - torch.min(arr)) / (
+        torch.max(arr) - torch.min(arr)
     ) + min_val
 
 
@@ -318,12 +318,11 @@ def get_normalized_depth(image_array, mode="unity"):
                     "megadepth" if they were computed with megadepth model
     """
     if mode == "unity":
-        depth = convert_depth_unity(np.array(image_array), far=1000)
-        return normalize(depth).astype(float)
+        depth = convert_depth_unity(image_array, far=1000)
+        return normalize(depth)
     elif mode == "megadepth":
-        depth = convert_depth_megadepth(np.array(image_array))
-        return normalize(depth).astype(float)
-    else:
+        depth = convert_depth_megadepth(image_array)
+        return normalize(depth)
         print("depth mode not supported")
 
 def get_model_list(dirname, key):
