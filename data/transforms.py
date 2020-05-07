@@ -61,9 +61,9 @@ class ToTensor:
     def __call__(self, data):
         new_data = {}
         for task, im in data.items():
-            if task in {"x", "a", "rx"}:
+            if task in {"x", "a", "rx", "d", "rd"}:
                 new_data[task] = self.ImagetoTensor(im)
-            elif task in {"h", "d", "w", "m", "rm"}:
+            elif task in {"h", "w", "m", "rm"}:
                 new_data[task] = self.MaptoTensor(im)
             elif task == "s":
                 new_data[task] = torch.squeeze(torch.from_numpy(np.array(im))).to(

@@ -10,7 +10,7 @@ from ExtraAdam import ExtraAdam
 
 class MaskDepthGenerator(BaseModel):
     def name(self):
-        return "MaskGeneratorModel"
+        return "MaskDepthGeneratorModel"
 
     @staticmethod
     def modify_commandline_options(opts, is_train=True):
@@ -103,8 +103,9 @@ class MaskDepthGenerator(BaseModel):
 
     def set_input(self, input):
         # Sim data
+        
         self.input = torch.cat(
-            [input.data.x.to(self.device), input.data.d.to(self.device)], dim=1
+            [input.data.x.to(self.device), input.data.d.type(torch.FloatTensor).to(self.device)], dim=1
         )
         self.image = input.data.x.to(self.device)
         mask = input.data.m.to(self.device)
@@ -113,7 +114,7 @@ class MaskDepthGenerator(BaseModel):
 
         # Real data
         self.r_input = torch.cat(
-            [input.data.rx.to(self.device), input.data.rd.to(self.device)], dim=1
+            [input.data.rx.to(self.device), input.data.rd.type(torch.FloatTensor).to(self.device)], dim=1
         )
         self.r_im = input.data.rx.to(self.device)
         self.r_mask = input.data.rm.to(self.device)  # From segmentation, or whatever
@@ -328,10 +329,11 @@ class MaskDepthGenerator(BaseModel):
         self.r_mask = input.data.rm.to(self.device).unsqueeze(0)
 
     def save_test_images(self, test_display_data, curr_iter, name="test_iter_"):
+        print("saving test image with depth")
         overlay = self.overlay
         save_images = []
         for i in range(len(test_display_data)):
-            self.set_input(test_display_data[i])
+            self.set_input_display(test_display_data[i])
             self.test()
             save_images.append(self.image[0])
             # Overlay mask:
@@ -347,6 +349,7 @@ class MaskDepthGenerator(BaseModel):
                 + self.fake_mask[0].repeat(3, 1, 1)
             )
             save_depth = self.depth[0]
+            print(save_depth)
 
             if overlay:
                 save_images.append(save_depth.repeat(3, 1, 1))

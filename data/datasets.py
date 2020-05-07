@@ -339,7 +339,7 @@ class RealSimDepthDataset(Dataset):
         paths["rx"] = self.real_samples_paths[real_i]["x"]
         paths["rm"] = self.real_samples_paths[real_i]["m"]
         paths["rd"] = self.real_samples_paths[real_i]["d"]
-
+        
         if self.transform:
             # first perform transform on input images and then convert depth image
             # to depth array
@@ -350,7 +350,7 @@ class RealSimDepthDataset(Dataset):
                 np.array(datadict["d"]), mode=self.opts.data.depth.sim_mode
             )
             datadict["rd"] = get_normalized_depth(
-                np.array(datadict["d"]), mode=self.opts.data.depth.real_mode
+                np.array(datadict["rd"]), mode=self.opts.data.depth.real_mode
             )
             return Dict({"data": datadict, "paths": paths})
         datadict = self.transform(
@@ -360,7 +360,7 @@ class RealSimDepthDataset(Dataset):
             np.array(datadict["d"]), mode=self.opts.depth.sim_mode
         )
         datadict["rd"] = get_normalized_depth(
-            np.array(datadict["d"]), mode=self.opts.depth.real_mode
+            np.array(datadict["rd"]), mode=self.opts.depth.real_mode
         )
         return Dict({"data": datadict, "paths": paths})
 
@@ -419,8 +419,6 @@ class SimDepthDataset(Dataset):
             dict: dataset item where tensors of data are in item["data"] which is a dict
                   {task: tensor}
         """
-
-        real_i = i % len(self.real_samples_paths) - 1
         paths = self.samples_paths[i]
 
         if self.transform:

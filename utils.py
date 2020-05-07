@@ -280,15 +280,16 @@ def convert_depth_unity(im_array, far=1000):
         d = (far/N) * [((255 - R)//8)*256*31 + ((255 - G)//8)*256 + (255 - B)]
                 
     """
-    R = im_array[:, :, 0]
-    G = im_array[:, :, 1]
-    B = im_array[:, :, 2]
+    
+    R = im_array[0, :, :]
+    G = im_array[1, :, :]
+    B = im_array[2, :, :]
 
     R = ((247 - R) / 8).astype(float)
     G = ((247 - G) / 8).astype(float)
     B = (255 - B).astype(float)
     depth = ((R * 256 * 31 + G * 256 + B).astype(float)) / (256 * 31 * 31 - 1)
-    return depth * far
+    return np.expand_dims(depth * far, 0)
 
 
 def convert_depth_megadepth(im_array):
@@ -318,10 +319,10 @@ def get_normalized_depth(image_array, mode="unity"):
     """
     if mode == "unity":
         depth = convert_depth_unity(np.array(image_array), far=1000)
-        return normalize(depth)
+        return normalize(depth).astype(float)
     elif mode == "megadepth":
         depth = convert_depth_megadepth(np.array(image_array))
-        return normalize(depth)
+        return normalize(depth).astype(float)
     else:
         print("depth mode not supported")
 

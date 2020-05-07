@@ -91,7 +91,7 @@ if __name__ == "__main__":
     print("Creating Model:")
     opts.comet.exp = comet_exp
     if opts.data.use_depth:
-        print("USing depth")
+        print("Using depth")
         model: MaskDepthGenerator = create_model(opts)
     else: 
         model: MaskGenerator = create_model(opts)
