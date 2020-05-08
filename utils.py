@@ -9,6 +9,7 @@ import time
 import torchvision.utils as vutils
 from torch.optim import lr_scheduler
 import numpy as np
+from PIL import Image
 from copy import deepcopy
 
 
@@ -259,6 +260,70 @@ def print_opts(flats):
             for k, v in flats.items()
         )
     )
+
+
+def convert_depth_unity(im_array, far=1000):
+    """
+    convert RGB depth image as np.array to array containing metric depth values.
+    The depth is encoded in the following way: 
+    - The information from the simulator is (1 - LinearDepth (in [0,1])). 
+        far corresponds to the furthest distance to the camera included in the depth map. 
+        LinearDepth * far gives the real metric distance to the camera. 
+    - depth is first divided in 31 slices encoded in R channel with values ranging from 0 to 247
+    - each slice is divided again in 31 slices, whose value is encoded in G channel
+    - each of the G slices is divided into 256 slices, encoded in B channel
+    In total, we have a discretization of depth into N = 31*31*256 - 1 possible values, covering a range of 
+    far/N meters.   
+    Note that, what we encode here is 1 - LinearDepth so that the furthest point is [0,0,0] (that is sky) 
+    and the closest point[255,255,255] 
+    The metric distance associated to a pixel whose depth is (R,G,B) is : 
+        d = (far/N) * [((255 - R)//8)*256*31 + ((255 - G)//8)*256 + (255 - B)]
+                
+    """
+    
+    R = im_array[0, :, :]
+    G = im_array[1, :, :]
+    B = im_array[2, :, :]
+
+    R = ((247 - R) / 8).type(torch.FloatTensor)
+    G = ((247 - G) / 8).type(torch.FloatTensor)
+    B = (255 - B).type(torch.FloatTensor)
+    depth = ((R * 256 * 31 + G * 256 + B).type(torch.FloatTensor)) / (256 * 31 * 31 - 1)
+    return (depth * far).unsqueeze(0)
+
+
+def convert_depth_megadepth(im_array):
+    """
+    im_array: PIL image of the depth map as torch.Tensor
+    The image obtained with megadepth is actually the inverse depth 
+    """
+    assert torch.Tensor.all(im_array > 0), "MegaDepth depths > 0 "
+    return (1 / im_array).type(torch.FloatTensor)
+
+
+def normalize(arr, min_val=-1, max_val=1):
+    """
+    Normalize between min and max
+    """
+    return (max_val - min_val) * (arr - torch.min(arr)) / (
+        torch.max(arr) - torch.min(arr)
+    ) + min_val
+
+
+def get_normalized_depth(image_array, mode="unity"):
+    """ 
+    Args:
+        image_array (np.array): np.array of depth map
+        mode (str) : "unity" if depth maps come from our simulated world
+                    "megadepth" if they were computed with megadepth model
+    """
+    if mode == "unity":
+        depth = convert_depth_unity(image_array, far=1000)
+        return normalize(depth)
+    elif mode == "megadepth":
+        depth = convert_depth_megadepth(image_array)
+        return normalize(depth)
+        print("depth mode not supported")
 
 def get_model_list(dirname, key):
     """get last model in dirname, whose name contain key

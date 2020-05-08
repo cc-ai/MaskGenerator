@@ -1,25 +1,24 @@
---- # ----------------
+
 # ----------------
 # ----- Data -----
+# ----------------
 data:
-  use_real: true
+  use_real: False
+  depth: True
   files: # if one is not none it will override the dirs location
-    base: "/network/tmp1/ccai/data/mask_generation/Unity1000R_fL_lowRes" # ! Check output_dir
+    base: "/network/home/tengmeli/MaskGen/files_lists" #tmp1/ccai/data/mask_generation/WD" # ! Check output_dir
     train: train_depth.json
     val: test_depth.json
-
+  
   real_files:
-    base: "/network/tmp1/ccai/data/mask_generation/streetview_mvp/"
-    train: train_depth.json
-    val: test_depth.json
+    base: "/network/tmp1/ccai/data/mask_generation/real"
+    train: train.json
+    val: test.json
 
   img_size: 256
-  use_depth: True
-  depth: 
-    sim_mode: "unity"
-    real_mode: "megadepth"
+
   loaders:
-    batch_size: 20
+    batch_size: 4
     shuffle: True
     num_workers: 4
   transforms:
@@ -28,20 +27,20 @@ data:
       p: 0.5
     - name: resize
       ignore: false
-      new_size: 256 #! Make sure this matches opts.data.img_size
+      new_size: 256 #! Make sure this matches opt.data.img_size
     - name: crop
       ignore: false
       height: 224
       width: 224
     - name: resize # ? this or change generator's output? Or resize larger then crop to 256?
       ignore: false
-      new_size: 256 #! Make sure this matches opts.data.img_size
+      new_size: 256 #! Make sure this matches opt.data.img_size
 
 # ---------------------
 # ----- Generator -----
 # ---------------------
 gen:
-  optim:
+  opt:
     optimizer: Adam # one in [Adam, ExtraAdam] default: Adam
     beta1: 0.9
     lr: 0.0005
@@ -75,11 +74,11 @@ gen:
 # ---------------------
 # ----- Discriminator -----
 # ---------------------
-
+  
 dis:
   soft_shift: 0.2 # label smoothing: real in U(1-soft_shift, 1), fake in U(0, soft_shift) # ! one-sided label smoothing
   flip_prob: 0.05 # label flipping
-  optim:
+  opt:
     optimizer: Adam # one in [Adam, ExtraAdam] default: Adam
     beta1: 0.5
     lr: 0.0005
@@ -102,27 +101,30 @@ dis:
   feature_DA:
     n_layers: 3
 
+
 # ------------------------
 # ----- Model options -----
 # ------------------------
 
-model:
-  model_name: "mask_depth_generator"
+model: 
+  model_name: 'sim_mask_depth_generator'
   is_train: true
   use_gpu: true
   lambdas: {}
-  loss_name: "wgan"
+  loss_name: 'wgan'
   verbose: False #print network at start
 
 # ------------------------
 # ----- Comet options ----
 # ------------------------
 
-comet:
+
+comet: 
   workspace: "melisandeteng"
-  project_name: "FloodMasksDepth"
+  project_name: "maskgen"
   exp: None #Will be defined in train.py
-  display_size: 5 #Num images to display (will take the x first ones) or list of indices of images to take
+  display_size: 5 #Num images to display
+
 
 # ------------------------
 # ----- Train Params -----
@@ -132,14 +134,12 @@ train:
   lambdas: # scaling factors in the total loss
   log_level: 1 # 0: no log, 1: only aggregated losses, >1 detailed losses
   print_freq: 1
-  output_dir: '/network/tmp1/ccai/data/mask_generation/output_files/wgan_feature_pixelDA_Unity_depth'
-
-  save_im: True
+  output_dir: '/network/home/tengmeli/MaskGen/outputs_depth' #ccai/data/mask_generation/output_files/WD_wgan_feature_pixelDA'
+  save_im_freq: 400
   save_freq: 20000
-  resume_checkpoint: False
-  resume_ckpt_dir: ''
-  load_iter: 146300
-  tests_per_epoch: 4
+  resume_checkpoint: false
+  load_iter: 500000
+
 
 # -----------------------------
 # ----- Validation Params -----
@@ -147,5 +147,5 @@ train:
 val:
   max_log_images: 1
   store_images: false # write to disk on top of comet logging
-  save_im_freq: 1000
+  save_im_freq: 400
   overlay: True

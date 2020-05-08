@@ -13,5 +13,6 @@ Branches
 |megadepth|add input depth information using [MegaDepth model](https://github.com/cc-ai/height_estimation/tree/master/src/MegaDepth) |Yes (Méli)|
 |watchdogs|train on Watchdogs dataset| Yes (Méli)|
 |discriminative|segmentation (discriminative) rather than generative approach| Yes|
-|exp_branch| general functionalities - resume training| Yes|
+
+
 
