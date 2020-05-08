@@ -59,7 +59,7 @@ class SimDataset(Dataset):
     def __getitem__(self, i):
         """Return an item in the dataset with fields:
         {
-            data: transform({),
+            data: transform({pil_image_loader(path, task)}) ,
             paths: [{task: path}],
             mode: [train|val]
         }
@@ -182,7 +182,7 @@ class RealSimDataset(Dataset):
     def __getitem__(self, i):
         """Return an item in the dataset with fields:
         {
-            data: transform({),
+            data: transform({pil_image_loader(path, task)}),
             paths: [{task: path}],
             mode: [train|val]
         }
@@ -226,7 +226,7 @@ class RealSimDataset(Dataset):
 
 def get_loader(opts, real=True, depth=True, no_check=False):
     if real:
-        if depth is True:
+        if depth:
             return DataLoader(
                 RealSimDepthDataset(
                     opts,
@@ -249,7 +249,7 @@ def get_loader(opts, real=True, depth=True, no_check=False):
                 num_workers=opts.data.loaders.get("num_workers", 8),
             )
     else:
-        if depth is True:
+        if depth:
             return DataLoader(
                 SimDepthDataset(
                     opts,
@@ -323,7 +323,7 @@ class RealSimDepthDataset(Dataset):
     def __getitem__(self, i):
         """Return an item in the dataset with fields:
         {
-            data: transform({),
+            data: transform({pil_image_loader(path, task)}),
             paths: [{task: path}],
             mode: [train|val]
         }
@@ -410,7 +410,7 @@ class SimDepthDataset(Dataset):
     def __getitem__(self, i):
         """Return an item in the dataset with fields:
         {
-            data: transform({),
+            data: transform({pil_image_loader(path, task)}),
             paths: [{task: path}],
             mode: [train|val]
         }
