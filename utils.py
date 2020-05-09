@@ -280,52 +280,51 @@ def convert_depth_unity(im_array, far=1000):
         d = (far/N) * [((255 - R)//8)*256*31 + ((255 - G)//8)*256 + (255 - B)]
                 
     """
-    R = im_array[:, :, 0]
-    G = im_array[:, :, 1]
-    B = im_array[:, :, 2]
+    im_array = (im_array * 255).type(torch.IntTensor)
+    R = im_array[0, :, :]
+    G = im_array[1, :, :]
+    B = im_array[2, :, :]
 
-    R = ((247 - R) / 8).astype(float)
-    G = ((247 - G) / 8).astype(float)
-    B = (255 - B).astype(float)
-    depth = ((R * 256 * 31 + G * 256 + B).astype(float)) / (256 * 31 * 31 - 1)
-    return depth * far
+    R = ((247 - R) / 8).type(torch.FloatTensor)
+    G = ((247 - G) / 8).type(torch.FloatTensor)
+    B = (255 - B).type(torch.FloatTensor)
+    depth = ((R * 256 * 31 + G * 256 + B).type(torch.FloatTensor)) / (256 * 31 * 31 - 1)
+    return (depth * far).unsqueeze(0)
 
 
 def convert_depth_megadepth(im_array):
     """
-    im_array: PIL image of the depth map as np.array 
+    im_array: PIL image of the depth map as torch.Tensor
     The image obtained with megadepth is actually the inverse depth 
     """
-    assert np.all(im_array > 0), "MegaDepth depths > 0 "
-    return 1 / im_array
+    assert torch.Tensor.all(im_array > 0), "MegaDepth depths > 0 "
+    return (1 / im_array).type(torch.FloatTensor)
 
 
 def normalize(arr, min_val=-1, max_val=1):
     """
     Normalize between min and max
     """
-    return (max_val - min_val) * (arr - np.min(arr)) / (
-        np.max(arr) - np.min(arr)
+    return (max_val - min_val) * (arr - torch.min(arr)) / (
+        torch.max(arr) - torch.min(arr)
     ) + min_val
 
 
-def get_normalized_depth(image_path, mode="unity"):
+def get_normalized_depth(image_array, mode="unity"):
     """ 
     Args:
-        image_path (str): path to image file
+        image_array (np.array): np.array of depth map
         mode (str) : "unity" if depth maps come from our simulated world
                     "megadepth" if they were computed with megadepth model
     """
-    img = Image.open(image_path)
     if mode == "unity":
-        depth = convert_depth_unity(np.array(img), far=1000)
+        depth = convert_depth_unity(image_array, far=1000)
         return normalize(depth)
     elif mode == "megadepth":
-        depth = convert_depth_megadepth(np.array(img))
+        depth = convert_depth_megadepth(image_array)
         return normalize(depth)
-    else:
         print("depth mode not supported")
-        
+
 def get_model_list(dirname, key):
     """get last model in dirname, whose name contain key
     Arguments:
