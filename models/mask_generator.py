@@ -1,4 +1,3 @@
-import os
 import torch
 import itertools
 from .base_model import BaseModel
@@ -8,6 +7,8 @@ from time import time
 from ExtraAdam import ExtraAdam
 
 # Domain adaptation for real data
+
+
 class MaskGenerator(BaseModel):
     def name(self):
         return "MaskGeneratorModel"
@@ -365,5 +366,3 @@ class MaskGenerator(BaseModel):
         )
 
         return time() - st
-
- 

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import torch
 import itertools
 from .base_model import BaseModel
@@ -396,4 +397,3 @@ class MaskDepthGenerator(BaseModel):
         )
 
         return time() - st
-
