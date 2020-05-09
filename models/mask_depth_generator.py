@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import torch
 import itertools
 from .base_model import BaseModel
@@ -394,6 +393,7 @@ class MaskDepthGenerator(BaseModel):
             comet_exp=self.comet_exp,
             store_im=self.store_image,
             is_test=is_test,
+            im_per_row = 4
         )
 
         return time() - st
