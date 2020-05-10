@@ -315,8 +315,13 @@ class MaskDepthGenerator(BaseModel):
         self.optimizer_D_P_step()
 
     def normalize_depth_display(self, depth):
-        n_depth = (depth - min(depth)) / (max(depth) - min(depth))
-        return 255 * n_depth
+        n_depth = (depth - torch.min(depth)) / (torch.max(depth) - torch.min(depth))
+        n_depth += 1e-6
+        n_depth = torch.log(1 / n_depth)
+        n_depth -= torch.min(n_depth)
+        n_depth /= torch.max(n_depth)
+        
+        return (n_depth*255).type(torch.IntTensor).type(torch.FloatTensor)
 
     def set_input_display(self, input):
         # for image log
@@ -325,7 +330,6 @@ class MaskDepthGenerator(BaseModel):
         self.depth = (
             self.normalize_depth_display(input.data.d).unsqueeze(0).to(self.device)
         )
-
         self.mask = input.data.m.unsqueeze(0).to(self.device)
         self.paths = input.paths
 
@@ -364,7 +368,7 @@ class MaskDepthGenerator(BaseModel):
             else:
                 save_images.append(self.mask[0].repeat(3, 1, 1))
                 save_images.append(self.fake_mask[0].repeat(3, 1, 1))
-
+            save_images.append(self.depth[0].repeat(3,1,1))
         for i in range(len(test_display_data)):
             # Append real masks (overlayed and itself):
             self.set_input_display(test_display_data[i])
@@ -382,13 +386,14 @@ class MaskDepthGenerator(BaseModel):
             )
             save_images.append(save_real_mask_seg)
             save_images.append(save_real_mask)
+            save_images.append(self.r_depth[0].repeat(3,1,1))
         write_images(
             save_images,
             curr_iter,
             comet_exp=self.comet_exp,
             store_im=self.store_image,
             is_test=is_test,
+            im_per_row = 4
         )
 
         return time() - st
-

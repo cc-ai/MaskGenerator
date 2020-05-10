@@ -280,7 +280,7 @@ def convert_depth_unity(im_array, far=1000):
         d = (far/N) * [((255 - R)//8)*256*31 + ((255 - G)//8)*256 + (255 - B)]
                 
     """
-    
+    im_array = (im_array * 255).type(torch.IntTensor)
     R = im_array[0, :, :]
     G = im_array[1, :, :]
     B = im_array[2, :, :]
