@@ -41,9 +41,7 @@ class MaskDepthGenerator(BaseModel):
         self.netD = networks.define_D(opts).to(self.device)
 
         # Use the latent vector to define input_nc
-        opts.dis.default.input_nc = (
-            2 ** opts.gen.encoder.n_downsample
-        ) * opts.gen.encoder.dim
+        opts.dis.default.input_nc = (2 ** opts.gen.encoder.n_downsample) * opts.gen.encoder.dim
         opts.dis.default.n_layers = opts.dis.feature_DA.n_layers
         self.netD_F = networks.define_D(opts).to(
             self.device
@@ -60,16 +58,8 @@ class MaskDepthGenerator(BaseModel):
         self.opts = opts
 
         if self.isTrain:
-            GenOpt = (
-                ExtraAdam
-                if "extra" in opts.gen.optim.optimizer.lower()
-                else torch.optim.Adam
-            )
-            DisOpt = (
-                ExtraAdam
-                if "extra" in opts.dis.optim.optimizer.lower()
-                else torch.optim.Adam
-            )
+            GenOpt = ExtraAdam if "extra" in opts.gen.optim.optimizer.lower() else torch.optim.Adam
+            DisOpt = ExtraAdam if "extra" in opts.dis.optim.optimizer.lower() else torch.optim.Adam
             # define loss functions
             self.criterionGAN = networks.GANLoss(self.loss_name).to(self.device)
             # initialize optimizers
@@ -104,10 +94,7 @@ class MaskDepthGenerator(BaseModel):
         # Sim data
 
         self.input = torch.cat(
-            [
-                input.data.x.to(self.device),
-                input.data.d.type(torch.FloatTensor).to(self.device),
-            ],
+            [input.data.x.to(self.device), input.data.d.type(torch.FloatTensor).to(self.device),],
             dim=1,
         )
         self.image = input.data.x.to(self.device)
@@ -117,10 +104,7 @@ class MaskDepthGenerator(BaseModel):
 
         # Real data
         self.r_input = torch.cat(
-            [
-                input.data.rx.to(self.device),
-                input.data.rd.type(torch.FloatTensor).to(self.device),
-            ],
+            [input.data.rx.to(self.device), input.data.rd.type(torch.FloatTensor).to(self.device),],
             dim=1,
         )
         self.r_im = input.data.rx.to(self.device)
@@ -320,32 +304,33 @@ class MaskDepthGenerator(BaseModel):
         n_depth = torch.log(1 / n_depth)
         n_depth -= torch.min(n_depth)
         n_depth /= torch.max(n_depth)
-        
-        return (n_depth*255).type(torch.IntTensor).type(torch.FloatTensor)
+
+        return (n_depth * 255).type(torch.IntTensor).type(torch.FloatTensor)
 
     def set_input_display(self, input):
         # for image log
         # Sim data
+
         self.image = input.data.x.unsqueeze(0).to(self.device)
-        self.depth = (
-            self.normalize_depth_display(input.data.d).unsqueeze(0).to(self.device)
-        )
+        self.depth = self.normalize_depth_display(input.data.d).unsqueeze(0).to(self.device)
         self.mask = input.data.m.unsqueeze(0).to(self.device)
         self.paths = input.paths
+        self.input = torch.cat([self.image, self.depth,], dim=1,)
 
         # Real data
+
         self.r_im = input.data.rx.unsqueeze(0).to(self.device)
-        self.r_depth = (
-            self.normalize_depth_display(input.data.rd).unsqueeze(0).to(self.device)
-        )
+        self.r_depth = self.normalize_depth_display(input.data.rd).unsqueeze(0).to(self.device)
 
         self.r_mask = input.data.rm.unsqueeze(0).to(self.device)
+        self.r_input = torch.cat([self.r_im, self.r_depth], dim=1,)
 
     def save_test_images(self, test_display_data, curr_iter, is_test=True):
         st = time()
         overlay = self.overlay
         save_images = []
         for i in range(len(test_display_data)):
+
             self.set_input_display(test_display_data[i])
             self.test()
             save_images.append(self.image[0])
@@ -355,6 +340,17 @@ class MaskDepthGenerator(BaseModel):
                 - (self.image[0] * self.mask[0].repeat(3, 1, 1))
                 + self.mask[0].repeat(3, 1, 1)
             )
+
+            """
+            print("-------------------------")
+            print("keys: ", test_display_data[i].data.keys())
+            print("x: ", test_display_data[i].data.x.shape)
+            print("m: ", test_display_data[i].data.m.shape)
+            print("d: ", test_display_data[i].data.d.shape)
+            print("self.mask: ", self.mask.shape)
+            print("self.fake_mask: ", self.fake_mask)
+            print("-------------------------")
+            """
 
             save_fake_mask = (
                 self.image[0]
@@ -368,7 +364,7 @@ class MaskDepthGenerator(BaseModel):
             else:
                 save_images.append(self.mask[0].repeat(3, 1, 1))
                 save_images.append(self.fake_mask[0].repeat(3, 1, 1))
-            save_images.append(self.depth[0].repeat(3,1,1))
+            save_images.append(self.depth[0].repeat(3, 1, 1))
         for i in range(len(test_display_data)):
             # Append real masks (overlayed and itself):
             self.set_input_display(test_display_data[i])
@@ -386,14 +382,14 @@ class MaskDepthGenerator(BaseModel):
             )
             save_images.append(save_real_mask_seg)
             save_images.append(save_real_mask)
-            save_images.append(self.r_depth[0].repeat(3,1,1))
+            save_images.append(self.r_depth[0].repeat(3, 1, 1))
         write_images(
             save_images,
             curr_iter,
             comet_exp=self.comet_exp,
             store_im=self.store_image,
             is_test=is_test,
-            im_per_row = 4
+            im_per_row=4,
         )
 
         return time() - st
