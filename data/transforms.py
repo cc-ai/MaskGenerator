@@ -3,11 +3,14 @@ from torchvision import transforms as trsfs
 import torchvision.transforms.functional as TF
 import numpy as np
 from PIL import Image
+
+
 def interpolation(task):
-    if task in ['d', 'rd']:
-        return(Image.NEAREST)
+    if task in ["d", "rd", "s", "rs"]:
+        return Image.NEAREST
     else:
-        return(Image.BILINEAR)
+        return Image.BILINEAR
+
 
 class Resize:
     def __init__(self, target_size):
@@ -22,7 +25,10 @@ class Resize:
         self.w = int(self.w)
 
     def __call__(self, data):
-        return {task: TF.resize(im, (self.h, self.w), interpolation = interpolation(task)) for task, im in data.items()}
+        return {
+            task: TF.resize(im, (self.h, self.w), interpolation=interpolation(task))
+            for task, im in data.items()
+        }
 
 
 class RandomCrop:
@@ -66,14 +72,14 @@ class ToTensor:
     def __call__(self, data):
         new_data = {}
         for task, im in data.items():
-            if task in {"x", "a", "rx", "d", "rd"}:
+            if task in {"x", "a", "rx", "d", "rd", "s", "rs"}:
                 new_data[task] = self.ImagetoTensor(im)
             elif task in {"h", "w", "m", "rm"}:
                 new_data[task] = self.MaptoTensor(im)
-            elif task == "s":
-                new_data[task] = torch.squeeze(torch.from_numpy(np.array(im))).to(
-                    torch.int64
-                )
+            # elif task == "s":
+            #    new_data[task] = torch.squeeze(torch.from_numpy(np.array(im))).to(
+            #        torch.int64
+            #    )
             else:
                 print("ERROR: Task not found")
         return new_data
@@ -89,7 +95,7 @@ class Normalize:
         self.normalize = {
             "x": self.normImage,
             # "s": self.normSeg,
-            #"d": self.normDepth,
+            # "d": self.normDepth,
             "m": self.normMask,
             "rx": self.normImage,
             "rm": self.normMask,
@@ -100,6 +106,7 @@ class Normalize:
             task: self.normalize.get(task, lambda x: x)(tensor)
             for task, tensor in data.items()
         }
+
 
 class Normalize:
     def __init__(self):
@@ -111,7 +118,7 @@ class Normalize:
         self.normalize = {
             "x": self.normImage,
             # "s": self.normSeg,
-            #"d": self.normDepth,
+            # "d": self.normDepth,
             "m": self.normMask,
             "rx": self.normImage,
             "rm": self.normMask,
@@ -122,6 +129,7 @@ class Normalize:
             task: self.normalize.get(task, lambda x: x)(tensor)
             for task, tensor in data.items()
         }
+
 
 def get_transform(transform_item):
     """Returns the torchivion transform function associated to a
